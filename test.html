@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Konva Grid Drawing Example</title>
+    <script src="https://unpkg.com/konva@8/konva.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container"></div>
+    <script>
+      // create stage and layer
+      var stage = new Konva.Stage({
+        container: 'container',
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+
+      var layer = new Konva.Layer();
+      stage.add(layer);
+
+      // create grid
+      var gridSize = 50;
+      var grid = new Konva.Group();
+      for (var i = 0; i < stage.width(); i += gridSize) {
+        grid.add(new Konva.Line({
+          points: [i, 0, i, stage.height()],
+          stroke: 'lightgrey',
+          strokeWidth: 1,
+        }));
+      }
+      for (var j = 0; j < stage.height(); j += gridSize) {
+        grid.add(new Konva.Line({
+          points: [0, j, stage.width(), j],
+          stroke: 'lightgrey',
+          strokeWidth: 1,
+        }));
+      }
+      layer.add(grid);
+
+      // create line with circles
+      var isDrawing = false;
+      var lastLine;
+      var startPos;
+      var startCircle, endCircle;
+      var newLine;
+      /*layer.on('click tap', function(evt) {
+        console.log(evt.target)
+        if ((evt.target instanceof Konva.Line)||(evt.target instanceof Konva.Circle)) {
+          evt.target.destroy();
+          startCircle.destroy();
+          endCircle.destroy();
+          layer.batchDraw();
+        }
+      });*/
+      var Primer1 = false
+      var Primer2 = false
+      var startMovePos;
+      
+      var clickTarget;
+
+      stage.on('mousedown touchstart', function(e) {
+
+        clickTarget = e;
+        startMovePos = stage.getPointerPosition();
+        if ((e.target instanceof Konva.Line)||(e.target instanceof Konva.Circle)) {
+            Primer1 = true
+      
+            
+        }
+            var pos = stage.getPointerPosition();
+
+            startPos={x:Math.round(pos.x / gridSize) * gridSize, y:Math.round(pos.y / gridSize) * gridSize}
+
+            isDrawing = true;
+            /*
+            lastLine = new Konva.Line({
+                stroke: 'red',
+                strokeWidth: 10,
+                globalCompositeOperation: 'source-over',
+                points: [pos.x, pos.y]
+            });*/
+            startCircle = new Konva.Circle({
+                x: startPos.x,
+                y: startPos.y,
+                radius: 15,
+                fill: 'red'
+            });
+            endCircle = new Konva.Circle({
+                x: startPos.x,
+                y: startPos.y,
+                radius: 15,
+                fill: 'red'
+            });
+
+            
+
+
+            //layer.add(startCircle);
+            //layer.add(lastLine);
+            
+            //layer.add(endCircle);
+            newLine = new Konva.Line({
+                stroke: 'red',
+                strokeWidth: 10,
+                globalCompositeOperation: 'source-over',
+                points: [startPos.x, startPos.y]
+            })
+
+            lineGroup = new Konva.Group({name:"myline",})
+            lineGroup.add(startCircle)
+            lineGroup.add(endCircle)
+            lineGroup.add(newLine)
+
+            layer.add(lineGroup)
+            /*
+            layer.add(startCircle);
+            layer.add(endCircle);
+            layer.add(newLine)
+            */
+        
+      });
+      stage.on('mouseup touchend', function(e) {
+        
+        if(Primer1){
+            if(!Primer2){
+                clickTarget.target.parent.destroy();
+                //startCircle.destroy();
+                //endCircle.destroy();
+                layer.batchDraw();
+            }
+        }
+
+        Primer1 = false
+        Primer2 = false
+
+
+
+        var pos = stage.getPointerPosition();
+        var endPos={x:Math.round(pos.x / gridSize) * gridSize, y:Math.round(pos.y / gridSize) * gridSize}
+        var a = startPos.x - endPos.x;
+        var b = startPos.y - endPos.y;
+        if((Math.sqrt( a*a + b*b ))<=0){
+            newLine.destroy();
+            startCircle.destroy();
+            endCircle.destroy();
+            layer.batchDraw();
+        }
+        isDrawing = false;
+      });
+      
+      
+      stage.on('mousemove touchmove', function(e) {
+        
+        
+        
+
+        
+        
+        
+        if (!isDrawing) {
+          return;
+        }
+
+
+
+        var pos = stage.getPointerPosition();
+        /*var newPoints = lastLine.points().concat([pos.x, pos.y]);
+        lastLine.points(newPoints);
+        endCircle.position({
+          x: pos.x,
+          y: pos.y
+        });*/
+
+        var endPos={x:Math.round(pos.x / gridSize) * gridSize, y:Math.round(pos.y / gridSize) * gridSize}
+        
+        var a = startMovePos.x - endPos.x;
+        var b = startMovePos.y - endPos.y;
+        if((Math.sqrt( a*a + b*b ))>=10){
+            Primer2 = true;
+        }
+
+        if((Math.abs(endPos.x-startPos.x))>(Math.abs(endPos.y-startPos.y))){
+            endPos = {x:endPos.x,y:startPos.y}
+	    }else{
+            endPos = {x:startPos.x,y:endPos.y}
+	    }
+
+        //var newPoints = newLine.points().concat([endPos.x, endPos.y]);
+        //newLine.points(newPoints);
+        newLine.points([startPos.x, startPos.y, endPos.x, endPos.y]);
+        
+        endCircle.position(endPos);
+       
+        
+        
+        layer.batchDraw();
+      });
+      
+      
+    </script>
+  </body>
+</html>
