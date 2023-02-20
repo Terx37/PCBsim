@@ -233,6 +233,7 @@ function handleDrag(event){
 		handles:true,
 		//center: true
     };
+	
 	/*
 	result = false;
 	var resultI;
