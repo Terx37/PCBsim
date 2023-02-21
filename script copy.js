@@ -307,7 +307,14 @@ function drawWire(beginning, end, color, removeOnDrag = true) {
 	
 	wire.data.wireStartPos = {x:beginning.x,y:beginning.y}
 	wire.data.wireEndPos = {x:end.x,y:end.y}
-	
+	if(beginning.x == end.x){
+		wire.data.orientation = "vertical"
+	}else{
+		//beginning.y == end.y
+		wire.data.orientation = "horizontal"
+	}
+
+
 	wire.data.connected = {start:[],end:[]}
 
 	//wire.data.connected = new Map()
@@ -361,7 +368,8 @@ function handleRelease(event) {
 
 				points.push({x:xPos, y:yPos});
 			}
-
+			console.log(points);
+			
 			/*var hitTestOptions = {
 
 				fill: false,
@@ -386,10 +394,10 @@ function handleRelease(event) {
 
 				fill: false,
 				tolerance: 1,
-				curves: true,
+				curves: false,
 				center: false,
-				
-				handles: true,
+				segments: true,
+				handles: false,
 				//type: "fill",
 				//class: "Group"
 			}
@@ -400,7 +408,7 @@ function handleRelease(event) {
 				curves: true,
 				center: false,
 				
-				handles: true,
+				handles: false,
 				//type: "fill",
 				//class: "Group"
 			}
@@ -416,69 +424,172 @@ function handleRelease(event) {
 				//console.log(wire);
 				if(hitResult) {
 					console.log(hitResult);
+
 				}else {
 					console.log("null");
 				}
 				hitResult.forEach((hitResult) => {
+					if(hitResult.item.parent.id == wire.id){
+						return;
 					
+					}
+					console.log("GWGAG");
+
 					//console.log("A");
 					if(hitResult){
-						console.log("B");
+						//console.log("B");
 	
-						if(hitResult.type === "handle-in"){
+						if(hitResult.type === "segment"){
 							if ((index == 0)||(index == points.length-1)) {
+								console.log("VEBABEAB")
+								if(hitResult.item.parent.data.orientation == wire.data.orientation){
+									//antiOverlap(hitResult,wire);
+
+									console.log("!")
+									if((point.x == hitResult.item.parent.data.wireStartPos.x)&&(point.y == hitResult.item.parent.data.wireStartPos.y)){
+										//we hit start
+										
+										if(hitResult.item.parent.data.connected.start.length == 0){
+											let newLine3;
+											if(index == 0){
+												//our start
+												newLine3 = drawWire(hitResult.item.parent.data.wireEndPos, wire.data.wireEndPos, "red", false);		
+												newLine3.data = hitResult.item.parent.data
+												newLine3.data.connected.start = hitResult.item.parent.data.connected.end;
+												newLine3.data.connected.end = wire.data.connected.end;
+
+																				
+											}else{
+												//our end
+												
+												newLine3 = drawWire(wire.data.wireStartPos, hitResult.item.parent.data.wireEndPos, "red", false)
+												newLine3.data = hitResult.item.parent.data
+												newLine3.data.connected.start = wire.data.connected.start;
+												newLine3.data.connected.end = hitResult.item.parent.data.connected.end;
+											}
+											wire.remove()
+											hitResult.item.parent.remove()
+											wire=newLine3
+											
+											//lines.addChild(newLine3)
+										}else{
+											//console.log("START");
+											//hitResult.item.parent.data.connected.set([point.x,point.y].toString(), wire);
+											/*let splitLine1start = hitResult.item.parent.data.wireStartPos;
+											let splitLine1end = point;
+											let splitLine2start = point;
+											let splitLine2end = hitResult.item.parent.data.wireEndPos;
+											let newLine1 = drawWire(splitLine1start, splitLine1end, "red");
+											newLine1.data = hitResult.item.parent.data
+											newLine1.data.connected.start = null;
+											newLine1.data.connected.end = null;
+											let newLine2 = drawWire(splitLine2start, splitLine2end, "blue");*/
+											
+											if((point.x == wire.data.wireStartPos.x)&&(point.y == wire.data.wireStartPos.y)){
+												wire.data.connected.start = hitResult.item.parent;
+												
+											}else{
+												wire.data.connected.end = hitResult.item.parent;
+											}
+											if((point.x == hitResult.item.parent.data.wireStartPos.x) && (point.y == hitResult.item.parent.data.wireStartPos.y)){
+												hitResult.item.parent.data.connected.start = wire
+											}else{
+												hitResult.item.parent.data.connected.end = wire
+											}
+			
+										}
+									}else{
+										
+										//we hit end
+										if(hitResult.item.parent.data.connected.end.length == 0){
+											console.log("?")
+											let newLine3;
+											if(index == 0){
+												//our start
+												newLine3 = drawWire(hitResult.item.parent.data.wireStartPos, wire.data.wireEndPos, "red", false);		
+												newLine3.data = hitResult.item.parent.data
+												newLine3.data.connected.start = hitResult.item.parent.data.connected.start;
+												newLine3.data.connected.end = wire.data.connected.end;
+
+																				
+											}else{
+												//our end
+												
+												newLine3 = drawWire(wire.data.wireStartPos, hitResult.item.parent.data.wireStartPos, "red", false)
+												newLine3.data = hitResult.item.parent.data
+												newLine3.data.connected.start = wire.data.connected.start;
+												newLine3.data.connected.end = hitResult.item.parent.data.connected.start;
+												
+											}
+											wire.remove()
+											hitResult.item.parent.remove()
+											wire = newLine3;
+											
+											//wire=undefined
+											lines.addChild(newLine3)
+										}else{
+											//console.log("START");
+											//hitResult.item.parent.data.connected.set([point.x,point.y].toString(), wire);
+											/*let splitLine1start = hitResult.item.parent.data.wireStartPos;
+											let splitLine1end = point;
+											let splitLine2start = point;
+											let splitLine2end = hitResult.item.parent.data.wireEndPos;
+											let newLine1 = drawWire(splitLine1start, splitLine1end, "red");
+											newLine1.data = hitResult.item.parent.data
+											newLine1.data.connected.start = null;
+											newLine1.data.connected.end = null;
+											let newLine2 = drawWire(splitLine2start, splitLine2end, "blue");*/
+											
+											if((point.x == wire.data.wireStartPos.x)&&(point.y == wire.data.wireStartPos.y)){
+												wire.data.connected.start = hitResult.item.parent;
+												
+											}else{
+												wire.data.connected.end = hitResult.item.parent;
+											}
+											if((point.x == hitResult.item.parent.data.wireStartPos.x) && (point.y == hitResult.item.parent.data.wireStartPos.y)){
+												hitResult.item.parent.data.connected.start = wire
+											}else{
+												hitResult.item.parent.data.connected.end = wire
+											}
+			
+										}
+									}
+								}
+							}
 							
-								console.log("START");
-								//hitResult.item.parent.data.connected.set([point.x,point.y].toString(), wire);
-								/*let splitLine1start = hitResult.item.parent.data.wireStartPos;
-								let splitLine1end = point;
-								let splitLine2start = point;
-								let splitLine2end = hitResult.item.parent.data.wireEndPos;
-								let newLine1 = drawWire(splitLine1start, splitLine1end, "red");
-								newLine1.data = hitResult.item.parent.data
-								newLine1.data.connected.start = null;
-								newLine1.data.connected.end = null;
-								let newLine2 = drawWire(splitLine2start, splitLine2end, "blue");*/
-								
-								if((point.x == wire.data.wireStartPos.x)&&(point.y == wire.data.wireStartPos.y)){
+
+							else{
+								console.log("ELSE 1");
+								if(hitResult.item.parent.data.orientation == wire.data.orientation){
+									//antiOverlap(hitResult,wire);
+
+								}else{
+									//console.log("START");
+									//redraw old line
+									splitOldWire = drawWire(dividedLineBegining,point,"red", false)
+									//transfers data
+									let wireData = wire.data;
+									splitOldWire.data = wireData;
+									splitOldWire.data.wireStartPos = dividedLineBegining;
+									splitOldWire.data.wireEndPos = point;
+									splitOldWire.data.connected.start = wireData.connected.start;
+									splitOldWire.data.connected.end = hitResult.item.parent;
+
+									//ads the cutoffed wire to lines (the last wire gets added at the end of the function)
+									wire.remove()
+									//wire=undefined
+									lines.addChild(splitOldWire)
+									//draw a new line
+									wire = drawWire(point,points[points.length-1],"blue", false)
+									wire.data = wireData;
+									wire.data.wireStartPos = point;
+									wire.data.wireEndPos = points[points.length-1];
 									wire.data.connected.start = hitResult.item.parent;
+									wire.data.connected.end = wireData.connected.end;
+									//wire.removeOnMove()
 									
-								}else{
-									wire.data.connected.end = hitResult.item.parent;
+									dividedLineBegining = point;
 								}
-								if((point.x == hitResult.item.parent.data.wireStartPos.x) && (point.y == hitResult.item.parent.data.wireStartPos.y)){
-									hitResult.item.parent.data.connected.start = wire
-								}else{
-									hitResult.item.parent.data.connected.end = wire
-								}
-
-
-							}else{
-								//console.log("START");
-								//redraw old line
-								splitOldWire = drawWire(dividedLineBegining,point,"red", false)
-								//transfers data
-								let wireData = wire.data;
-								splitOldWire.data = wireData;
-								splitOldWire.data.wireStartPos = dividedLineBegining;
-								splitOldWire.data.wireEndPos = point;
-								splitOldWire.data.connected.start = wireData.connected.start;
-								splitOldWire.data.connected.end = hitResult.item.parent;
-
-								//ads the cutoffed wire to lines (the last wire gets added at the end of the function)
-								wire.remove()
-	
-								lines.addChild(splitOldWire)
-								//draw a new line
-								wire = drawWire(point,points[points.length-1],"blue", false)
-								wire.data = wireData;
-								wire.data.wireStartPos = point;
-								wire.data.wireEndPos = points[points.length-1];
-								wire.data.connected.start = hitResult.item.parent;
-								wire.data.connected.end = wireData.connected.end;
-								//wire.removeOnMove()
-								
-								dividedLineBegining = point;
 							}
 	
 							
@@ -499,23 +610,96 @@ function handleRelease(event) {
 					
 					hitResult2 = hitTestWire(point,options2)
 					hitResult2.forEach((hitResult) => {
+						if(hitResult.item.parent.id == wire.id){
+							return;
+						
+						}
 						if(hitResult.type === "curve"){
-							console.log("START");
-							//hitResult.item.parent.data.connected.set([point.x,point.y].toString(), wire);
-							let splitLine1start = hitResult.item.parent.data.wireStartPos;
-							let splitLine1end = point;
-							let splitLine2start = point;
-							let splitLine2end = hitResult.item.parent.data.wireEndPos;
-							let newLine1 = drawWire(splitLine1start, splitLine1end, "red", false);
+							if(hitResult.item.parent.data.orientation == wire.data.orientation){
+								
+								//antiOverlap(hitResult,wire,index,point);
+								
+								let a1 = wire.data.wireStartPos;
+								let a2 = wire.data.wireEndPos;
+								let b1 = hitResult.item.parent.data.wireStartPos;
+								let b2 = hitResult.item.parent.data.wireEndPos; 
+								let aStart
+								let aEnd
+								let leftMostPos
+								let rightMostPos
+								if(wire.data.orientation == "vertical"){
+									aStart = wire.data.wireStartPos.y
+									aEnd = wire.data.wireEndPos.y
+								
+									leftMost = Math.min(a1.y,a2.y,b1.y,b2.y);
+									rightMost = Math.max(a1.y,a2.y,b1.y,b2.y);
+									leftMostPos = {x: a1.x, y: leftMost}
+									rightMostPos = {x: a1.x, y: rightMost}
+								}else{
+									aStart = wire.data.wireStartPos.x
+									aEnd = wire.data.wireEndPos.x
+									
+									leftMost = Math.min(a1.x,a2.x,b1.x,b2.x);
+									rightMost = Math.max(a1.x,a2.x,b1.x,b2.x);
+									leftMostPos = {x: leftMost, y:a1.y}
+									rightMostPos = {x: rightMost, y:a1.y}
+								}
+							
+								//get the higher value								
+								let aMax = Math.max(a1, a2);
+								let aMin = Math.min(a1, a2);
+							
+								let bMax = Math.max(b1, b2);
+								let bMin = Math.min(b1, b2);
+							
+								
+								hitResult.item.parent.remove()
+								wire.remove()
+								wire = drawWire(leftMostPos, rightMostPos, "blue", false)
 
-							newLine1.data = hitResult.item.parent.data
-							newLine1.data.connected.start = null;
-							newLine1.data.connected.end = null;
-							lines.addChild(newLine1)
+								
 
-							let newLine2 = drawWire(splitLine2start, splitLine2end, "blue", false);
-							lines.addChild(newLine2)
-							hitResult.item.parent.remove()
+							}else{
+
+								//console.log("START");
+								//hitResult.item.parent.data.connected.set([point.x,point.y].toString(), wire);
+								/*if((point.x == hitResult.item.parent.data.wireStartPos.x)&&(point.y == hitResult.item.parent.data.wireStartPos.y)){
+									hitResult.item.parent.data.connected.start.push(point)
+								}else if((point.x == hitResult.item.parent.data.wireEndPos.x)&&(point.y == hitResult.item.parent.data.wireEndPos.y)){
+									hitResult.item.parent.data.connected.end.push(point)
+
+								}*/
+								
+								
+
+								if((point.x == hitResult.item.parent.data.wireStartPos.x)&&(point.y == hitResult.item.parent.data.wireStartPos.y)){
+
+								}else if((point.x == hitResult.item.parent.data.wireEndPos.x)&&(point.y == hitResult.item.parent.data.wireEndPos.y)){
+
+								}else{
+									let splitLine1start = hitResult.item.parent.data.wireStartPos;
+									let splitLine1end = point;
+									let splitLine2start = point;
+									let splitLine2end = hitResult.item.parent.data.wireEndPos;
+									let newLine1 = drawWire(splitLine1start, splitLine1end, "red", false);
+		
+									newLine1.data = hitResult.item.parent.data
+									newLine1.data.connected.start = null;
+									newLine1.data.connected.end = null;
+									lines.addChild(newLine1)
+		
+									let newLine2 = drawWire(splitLine2start, splitLine2end, "blue", false);
+									lines.addChild(newLine2)
+									hitResult.item.parent.remove()
+								}
+
+
+								
+							
+							
+							}
+							
+
 
 							//Implement overlap protection, if this is fired, you need to find the node of the hit wire that is overlapping with currently drawn wire, you can do this by checking whether either the start or end node of the hit wire is inside the space in between the two nodes of currently drawn wire, a geometrical equation should suffice, there are five possible situations for overlap: 
 							//1. The start node of the hit wire is inside the space in between the two nodes of currently drawn wire
@@ -565,8 +749,10 @@ function handleRelease(event) {
 				}
 			}*/
 			
+			if(wire != undefined){
+				lines.addChild(wire)
 
-			lines.addChild(wire)
+			}
 			//wire = null;
 			//spawnNode(testPoint);
 		
@@ -576,3 +762,61 @@ function handleRelease(event) {
 	}
 }
 
+function antiOverlap(hitResult,wire,index,point){
+
+	let a1 = wire.data.wireStartPos;
+	let a2 = wire.data.wireEndPos;
+	let b1 = hitResult.item.parent.data.wireStartPos;
+	let b2 = hitResult.item.parent.data.wireEndPos; 
+	let aStart
+	let aEnd
+	if(wire.data.orientation == "vertical"){
+		aStart = wire.data.wireStartPos.y
+		aEnd = wire.data.wireEndPos.y
+		a1 = a1.y
+		a2 = a2.y
+		b1 = b1.y
+		b2 = b2.y
+	}else{
+		aStart = wire.data.wireStartPos.x
+		aEnd = wire.data.wireEndPos.x
+		a1 = a1.x
+		a2 = a2.x
+		b1 = b1.x
+		b2 = b2.x
+	}
+
+	//get the higher value								
+	let aMax = Math.max(a1, a2);
+	let aMin = Math.min(a1, a2);
+
+	let bMax = Math.max(b1, b2);
+	let bMin = Math.min(b1, b2);
+
+	leftMost = Math.min(a1,a2,b1,b2);
+	rightMost = Math.max(a1,a2,b1,b2);
+
+
+
+
+	if (aStart > aMin && aStart < aMax) {
+		// bMax is within a
+		console.log("1");
+		//its end is between us
+	}
+	if (aEnd > aMin && aEnd < aMax){
+		// bMin is within a
+		console.log("2");
+
+	}
+	if (aStart > bMin && aStart < bMax) {
+		// aMax is within b
+		console.log("3");
+	}
+	if (aEnd > bMin && aEnd < bMax){
+		// aMin is within b
+		console.log("4");
+
+	}
+	//hitResult.item.parent
+}
