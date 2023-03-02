@@ -1,4 +1,4 @@
-var path;
+
 var canvas = document.getElementById('mainCanvas');
 
 
@@ -7,7 +7,8 @@ paper.install(window);
 paper.setup(canvas);
 
 
-
+var isDrawing = false;
+var path;
 var lineDrawTool = new Tool();
 var deleteTool = new Tool();
 
@@ -15,28 +16,14 @@ var deleteTool = new Tool();
 selectTool = new Tool()
 selectTool.activate()
 
-function makeOutput(parent, i, posX,posY) {
-	var output
-	output = makeIO(parent, i, posX,posY)
-	if(!output){return undefined}
+parent = {out: [{posX: 100, posY: 200}]}
 
-	output.onMouseDown = function(event) {
-		console.log("WORKS");
-		outputClicked(event, output);
-	}
-	return output;
-}
-function makeInput(parent, i, posX,posY) {
-	var input
-	input = makeIO(parent, i, posX,posY)
-	if(!input){return undefined}
+console.log(makeOutput(null,null,null,null));
+console.log(makeOutput(parent,0,null,null));
+console.log(makeOutput(null,null,100,300));
+console.log(makeInput(null,null,200,100));
 
-	input.onMouseDown = function(event) {
-		console.log("WORKS");
-		inputClicked(event, input);
-	}
-	return input;
-}
+
 function makeIO(parent,i,posX, posY,radius = 20,width = 7,fillColor = "yellow",strokeColor = "black",hoverColor = "red") {
 	//if suplied parent of output and number of output, automaticly places itself to the correct position
 	//if suplied position, uses that
@@ -56,23 +43,42 @@ function makeIO(parent,i,posX, posY,radius = 20,width = 7,fillColor = "yellow",s
 	io.strokeColor = strokeColor;
 	io.onMouseEnter = function(event) {
 		io.fillColor = hoverColor;
-		io.bringToFront();
+		
 	}
 	io.onMouseLeave = function(event) {
 		io.fillColor = fillColor;
 		
 	}
-	
+	io.onFrame = function() {
+		io.bringToFront();
+	}
 
 	return io;
 }
 
-parent = {out: [{posX: 100, posY: 200}]}
+function makeOutput(parent, i, posX,posY) {
+	var output
+	output = makeIO(parent, i, posX,posY)
+	if(!output){return undefined}
+	output.data.objectType = "output"
+	output.onMouseDown = function(event) {
+		console.log("WORKS");
+		outputClicked(event, output);
+	}
+	return output;
+}
 
-console.log(makeOutput(null,null,null,null));
-console.log(makeOutput(parent,0,null,null));
-console.log(makeOutput(null,null,100,300));
-console.log(makeInput(null,null,200,100));
+function makeInput(parent, i, posX,posY) {
+	var input
+	input = makeIO(parent, i, posX,posY)
+	if(!input){return undefined}
+	input.data.objectType = "input"
+	input.onMouseDown = function(event) {
+		console.log("WORKS");
+		inputClicked(event, input);
+	}
+	return input;
+}
 
 function outputClicked(event, self) {
 	console.log("outputClicked");
@@ -80,7 +86,7 @@ function outputClicked(event, self) {
 		if(isDrawing){
 			releaseDrawing();
 		}
-		isDrawing = true;
+		
 
 		if (path) {
 			path.selected = true;
@@ -89,94 +95,108 @@ function outputClicked(event, self) {
 		// Create a new path and set its stroke color to black:
 
 		path = createPath({x: self.data.x, y: self.data.y});
-
-		self.bringToFront();
+		path.add(event.point);
+		isDrawing = true;
+		path.segments[0].connectedToInput=true;	
+		console.log(path);
+		
+		//self.bringToFront();
 		//path.add(event.point);
 	}
 }
+
 function inputClicked(event, self) {
 	console.log("inputClicked")
 	if(paper.tool == lineDrawTool){
 			if(isDrawing){
-				
-				
-				
 				connectToInput(self)
-				
-	
 			}
 		}
 	
 }
 
-function Cont(children,parent){
-	this.children = new Array().concat(children)
-	this.parent = parent
-	function remove(){
-		this.parent.children = this.parent.children.concat(this.children)
-		this.children.forEach(function(child){
-            child.parent = this.parent
-        })
-		//this = undefined
+function connectToInput(self) {
+	if(path.segments.length <= 1){
+		path.remove()
+		path = undefined;
+		return;
 	}
-	function getTop(){
-		let top
-		if(parent == undefined){
-			top = this
-		}else{
-			top = parent.getTop()
-		}
-		return top
-	}
+	path.removeSegments(path.segments.length - 1);
+	path.add({x:self.data.x,y:self.data.y});
+
+	path.segments[path.segments.length - 1].connectedToInput=true;	
+
+	path.selected = true;
+	path = undefined;
+	isDrawing = false;
 }
 
 function deletePath(pathToDelete) {
-	var hitOptions = {ends:true, segments: false,stroke: false,curves:false, fill: false,tolerance: 0};
+	let hitOptions = {ends:true, segments: false,stroke: false,curves:false, fill: false,tolerance: 0};
+	
 	//first
-	var hitResults = project.hitTestAll(pathToDelete.firstSegment.point, hitOptions)
-	var connected = []
-	hitResults.forEach(function(hitResult){
-		//if hit self
-		if(hitResult.item.id == pathToDelete.id){
-			//discard
-			return;
-		}
-		connected.push(hitResult.item)
-
-		console.log(hitResult);
+	if(pathToDelete.firstSegment.connectedToInput == undefined){
+		let hitResults = project.hitTestAll(pathToDelete.firstSegment.point, hitOptions)
+		let connected = []
 		
-	})
-	if(connected.length == 2){
-		connected[0].join(connected[1])
-		connected[0].reduce()
-	}else if(connected.length == 1){
-		deletePath(connected[0])
-
+		hitResults.forEach(function(hitResult){
+			//if hit self
+			if(hitResult.item.id == pathToDelete.id){
+				//discard
+				return;
+			}
+			connected.push(hitResult.item)
+	
+			console.log(hitResult);
+			
+		})
+		if(connected.length == 2){
+			connected[0].join(connected[1])
+			//connected[0].reduce()
+			//connected[0].simplify()
+			//connected[0].flatten(10000000000)
+			//connected[0].smooth({ type: 'catmull-rom', factor: 0.5 });
+		}else if(connected.length == 1){
+			
+			
+			deletePath(connected[0])
+			
+	
+		}
 	}
+	
 	//last
-	hitResults = project.hitTestAll(pathToDelete.lastSegment.point, hitOptions)
-	connected = []
-	hitResults.forEach(function(hitResult){
-		//if hit self
-		if(hitResult.item.id == pathToDelete.id){
-			//discard
-			return;
+	if(pathToDelete.lastSegment.connectedToInput == undefined){
+		let hitResults = project.hitTestAll(pathToDelete.lastSegment.point, hitOptions)
+		let connected = []
+		hitResults.forEach(function(hitResult){
+			//if hit self
+			if(hitResult.item.id == pathToDelete.id){
+				//discard
+				return;
+			}
+			connected.push(hitResult.item)
+			console.log(hitResult);
+			
+		})
+		console.log(connected.length);
+		if(connected.length == 2){
+			
+			connected[0].join(connected[1])
+			//connected[0].reduce()
+			//connected[0].simplify()
+			//connected[0].flatten(10000000000)
+			//connected[0].smooth({ type: 'catmull-rom', factor: 0.5 });
+
+		}else if(connected.length == 1){
+			//if(connected[0].lastSegment.connectedToInput == undefined){
+				deletePath(connected[0])
+			//}
+			
+
 		}
-		connected.push(hitResult.item)
-		console.log(hitResult);
-		
-	})
-	console.log(connected.length);
-	if(connected.length == 2){
-		connected[0].join(connected[1])
-		connected[0].reduce()
-
-	}else if(connected.length == 1){
-		deletePath(connected[0])
-
+		//var hitResult = project.hitTestAll(event.target.lastSegment.point, hitOptions);
 	}
-	//var hitResult = project.hitTestAll(event.target.lastSegment.point, hitOptions);
-
 	pathToDelete.remove();
 	
 }
@@ -198,105 +218,30 @@ function createPath(position,segmentsArray) {
 		strokeWidth: 5,
 		data: {connections: new Array(),parentCont: null}
 	});
-
+	path.data.objectType = "line"
 	//path.onMouseDown = function(event) {
-	path.clickedLineDraw = function(event, self) {
+	path.clickedLineDraw = function(event, self,location) {
 		if(isDrawing){
 			//adding drawn path to self (path)
 			if(path.segments.length <= 1){
 				path.remove()
 				path = undefined;
+				return;
 			}
-			path.removeSegments(path.segments.length - 1);
-			path.add(event.point);
 
-			//split OG path
-			var hitOptions = {
-				segments: false,
-				stroke: true,
-				fill: true,
-				tolerance: 15
-			};
-			var hitResult = project.hitTest(event.point, hitOptions);
-			if (hitResult) {
-				//path = hitResult.item;
-				if (hitResult.type == 'segment') {
-					console.log("a");
-					segment = hitResult.segment;
-				} else if (hitResult.type == 'stroke') {
-					console.log("b");
 
-					var location = hitResult.location;
-					var lIndx = location.index;
-					segment = event.target.insert(location.index + 1, event.point);
-					
-					createPath(undefined, event.target.segments.slice(lIndx + 1))
-					event.target.segments = event.target.segments.slice(0,lIndx + 2)
-					//event.target.smooth();
-				}
-			}
+			console.log("b");
 			
-// #region a
+			path.removeSegments(path.segments.length - 1);
+			path.add(self.getNearestPoint(event.point));
+			var location = location;
+			var lIndx = location.index;
+			segment = self.insert(location.index + 1, self.getNearestPoint(event.point));
+			
+			createPath(undefined, self.segments.slice(lIndx + 1))
+			self.segments = self.segments.slice(0,lIndx + 2)
+			//event.target.smooth();
 
-
-			/*new Path({
-				segments: [position],
-				strokeColor: 'black',
-				// Select the path, so we can see its segment points:
-				fullySelected: true,
-				strokeWidth: 5,
-				data: {connections: new Array(),parentCont: null}
-			});*/
-			//if not drawing from self, back to self, move groups
-			/*if(event.target.parent != path.parent){
-				let fromParent = event.target.parent
-				let toParent = path.parent
-				/*if(path.parent.children.length  < event.target.parent.children.length){
-					fromParent = path.parent
-					toParent = event.target.parent
-				}
-				fromParent.children.forEach(function(child){
-					toParent.addChild(fromParent.children[0])
-					//fromParent.children[0].remove()
-				})*/
-				/*let newCont
-				let testedCont = fromParent.data.parentCont
-				let fromTop*/
-				//if(testedCont){
-				//	//look for top
-				//	fromTop = testedCont.getTop()
-				//if(testedCont.parent == undefined){
-				//	fromTop = testedCont.parent
-				//	/*while (true) {
-				//			break;
-				//		}else{
-				//			testedCont = testedCont.parent
-				//		}
-				//	}*/
-				//}else{
-				//	newCont = new Cont([fromParent,toParent])
-				//}
-				//testedCont = toParent.data.parentCont
-				//let toTop
-				//if(testedCont){
-				//	//look for top
-				//	toTop = testedCont.getTop()
-				//	/*while (true) {
-				//		if(testedCont.parent == undefined){
-				//			toTop = testedCont.parent
-				//			break;
-				//		}else{
-				//			testedCont = testedCont.parent
-				//		}
-				//	}*/
-				//}else{
-				//	newCont = new Cont([fromParent,toParent])
-				//}*/
-				//newCont = new Cont([fromTop,toTop])
-
-				//fromParent.remove()
-			//}
-// #endregion
 			path.selected = true;
 			path = undefined;
 			isDrawing = false;
@@ -308,9 +253,8 @@ function createPath(position,segmentsArray) {
 				fill: true,
 				tolerance: 15
 			};
-			var hitResult = project.hitTest(event.point, hitOptions);
+			var hitResult = project.hitTest(self.getNearestPoint(event.point), hitOptions);
 			if (hitResult) {
-				//path = hitResult.item;
 				if (hitResult.type == 'segment') {
 					console.log("a");
 					segment = hitResult.segment;
@@ -321,39 +265,21 @@ function createPath(position,segmentsArray) {
 					var lIndx = location.index;
 					console.log(location.index)
 					
-					segment = event.target.insert(location.index + 1, event.point);
-					//event.target.smooth();
+					segment = self.insert(location.index + 1, self.getNearestPoint(event.point));
 
-					//console.log(event.target.segments)
-					//console.log(event.target.segments.slice(0,1))
-					//console.log(location.index)
 					
-					/*new Path({
-						segments: event.target.segments.slice(lIndx + 1),
-						strokeColor: 'black',
-						// Select the path, so we can see its segment points:
-						fullySelected: true,
-						strokeWidth: 5,
-						data: {connections: new Array(),parentCont: null}
-					});*/
-					
-					createPath(undefined, event.target.segments.slice(lIndx + 1))
-					event.target.segments = event.target.segments.slice(0,lIndx + 2)
+					createPath(undefined, self.segments.slice(lIndx + 1))
+					self.segments = self.segments.slice(0,lIndx + 2)
 				}
 			}
-			createPath(event.point);
+			createPath(path.getNearestPoint(event.point));
+			path.add(event.point);
+			
 			isDrawing = true
 		}
 	}
-	path.clicked = function(event){
-		if(paper.tool == deleteTool){
-			
-			deletePath(event.target)
-
-		}
-		if(paper.tool == lineDrawTool){
-			
-		}
+	path.clickedDelete = function(event, self){
+			deletePath(self)
 	}
 
 	return path;
@@ -366,33 +292,8 @@ var textItem = new PointText({
 	fillColor: 'black',
 });
 
-function connectToInput(self) {
-	if(path.segments.length <= 1){
-		path.remove()
-		path = undefined;
-	}
-	path.removeSegments(path.segments.length - 1);
-	console.log(self)
-	path.add({x:self.data.x,y:self.data.y});
-	path.selected = true;
-	path = undefined;
-	isDrawing = false;
-}
 
 
-/*canvas.addEventListener("contextmenu", function(event){
-	//document.body.addEventListener("contextmenu", function(event){
-	//console.log ('Right click');
-	
-	event.stopImmediatePropagation();
-	event.stopPropagation();
-	event.preventDefault();
-	RClick()
-	return false;
-	//return true;
-});*/
-
-var G;
 var prevTool
 view.onKeyDown = function(event) {
 	//console.log();
@@ -402,35 +303,10 @@ view.onKeyDown = function(event) {
 		console.log(project.activeLayer.children[4].data.parentCont)
 	}
 	if(event.key == "o") {
-		//console.log(project.activeLayer);
-		G.remove();
+
 	}
 	if(event.key == "e"){
-		/*if(prevTool == undefined) {
-			prevTool = paper.tool;
-			console.log("set tool on first run");
-		}*/
-		/*if(paper.tool != lineDrawTool){
-			prevTool = paper.tool;
-
-
-
-			console.log("switched to LineDrawTool");
-
-			lineDrawTool.activate()
-			//lineDrawTool.onMouseDown(event) 
-			
-
-			
-		}else{
-
-			console.log("switched back")
-			releaseDrawing();
-			prevTool.activate()
-			//prevTool.onMouseDown(event) 
-		}*/
 		console.log("switched to LineDrawTool");
-
 		lineDrawTool.activate()
 	}
 	if(event.key == "s"){
@@ -447,8 +323,6 @@ view.onKeyDown = function(event) {
 	}
 }
 
-var isDrawing = false;
-
 function releaseDrawing(){
 	if(isDrawing){
 		path.removeSegment(path.segments.length -1);
@@ -456,61 +330,31 @@ function releaseDrawing(){
 			path.remove();
 		}
 		path = undefined;
-		
 		isDrawing = false;
-
 	}
 }
-
-function RClick(){
-	//path.removeSegment(path.segments.length - 1);
-	console.log("RClick");
-	//selectTool.activate()
-	
-	return false;
-}
-
-
 
 lineDrawTool.onMouseDown = function(event) {
-	// If we produced a path before, deselect it:
-	
-	//isDrawing = true;
-	
-	/*if (path) {
-		path.selected = true;
-	}*/
-	
-	//hit
+	let hitLine = false
+	hitTestOnMouseDown(event).every(function(hitResult){
 
-	if(false){
-		
-		if(isDrawing){
-			isDrawing = false;
-			path.selected = false;
-			
-			connectToInput(path,input)
-			path = undefined;
-
+		/*if (hitResult.type =='stroke') {
+		}*/
+		if (hitResult.item.data.objectType =='line') {
+			console.log("CLICKED ON STROKE");
+			hitResult.item.clickedLineDraw(event, hitResult.item,hitResult.location);
+			hitLine = true;
+			return false;
 		}
 		
-	}
-	var hitOptions = {
-		segments: true,
-		stroke: true,
-		//fill: true,
-		tolerance: 15
-	};
-	var hitResults = project.hitTestAll(event.point, hitOptions);
-	hitResults.forEach(function(hitResult){
-		console.log(hitResult.type)
-		if (hitResult.type =='stroke') {
-			hitResult.item.clickedLineDraw(event, hitResult.item);
-		}
 	})
 
-	if(isDrawing && path){	
+	if(isDrawing && path && !hitLine){	
+		path.removeSegment(path.segments.length -1);
 		path.add(event.point);
+		path.add(event.point);
+		
+		//lineDrawTool.onMouseMove(event)
 	}
 }
 selectTool.onMouseDown = function(event) {
@@ -518,21 +362,32 @@ selectTool.onMouseDown = function(event) {
 }
 
 deleteTool.onMouseDown = function(event) {
+	
+	hitTestOnMouseDown(event).every(function(hitResult){
+
+		if (hitResult.item.data.objectType =='line') {
+			
+			hitResult.item.clickedDelete(event, hitResult.item);
+			return false;
+		}
+	})
+}
+
+function hitTestOnMouseDown(event){
 	var hitOptions = {
-		segments: true,
-		stroke: true,
-		fill: true,
+		segments: false,
+		stroke: false,
+		fill: false,
+		curves: true,
 		tolerance: 15
 	};
 	var hitResults = project.hitTestAll(event.point, hitOptions);
-	hitResults.forEach(function(hitResult){
-		console.log(hitResult.type)
-		if (hitResult.type =='stroke') {
-			event.target = hitResult.item
-			hitResult.item.clicked(event);
-			
-		}
-	})
+	if(path){
+		return hitResults.filter(e => e.item.id != path.id)
+	}else{
+		return hitResults;
+	}
+
 }
 // While the user drags the mouse, points are added to the path
 // at the position of the mouse:
@@ -541,6 +396,7 @@ lineDrawTool.onMouseMove = function(event) {
 		if(path.segments.length <= 1){
 			path.remove()
 			path = undefined;
+			return;
 		}
 
 		path.removeSegment(path.segments.length - 1);
