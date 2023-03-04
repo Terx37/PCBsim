@@ -8,9 +8,11 @@ paper.setup(canvas);
 
 
 var isDrawing = false;
-var path;
+var heldPath;
 var lineDrawTool = new Tool();
 var deleteTool = new Tool();
+var clickTool = new Tool();
+var testTool = new Tool();
 
 //lineDrawTool.remove()
 selectTool = new Tool()
@@ -57,13 +59,36 @@ function makeIO(parent,i,posX, posY,radius = 20,width = 7,fillColor = "yellow",s
 }
 
 function makeOutput(parent, i, posX,posY) {
-	var output
+	let output
 	output = makeIO(parent, i, posX,posY)
 	if(!output){return undefined}
 	output.data.objectType = "output"
+	output.data.powerState
+	output.data.connected = function() {
+		console.log("TESTING FOR CONNECTIONS")
+		let hitOptions = {ends:true, segments: false,stroke: false,curves:false, fill: false,tolerance: 0};
+		let hitResults = project.hitTestAll({x: output.data.x, y: output.data.y}, hitOptions)
+		return hitResults.filter(e => e.item.id != output.id).map(e => e.item)
+	}
 	output.onMouseDown = function(event) {
 		console.log("WORKS");
 		outputClicked(event, output);
+	}
+
+	output.changePowerState = function() {
+		if(output.data.powerState){
+			console.log(output.data.connected());
+			output.data.connected().forEach(line => {
+				line.powerUpdate(true)
+				//line.strokeColor = "red"
+			});
+		}else{
+			output.data.connected().forEach(line => {
+				line.powerUpdate(false)
+				//line.strokeColor = "black"
+			});
+		}
+	
 	}
 	return output;
 }
@@ -86,23 +111,45 @@ function outputClicked(event, self) {
 		if(isDrawing){
 			releaseDrawing();
 		}
-		
-
-		if (path) {
-			path.selected = true;
+		if (heldPath) {
+			heldPath.selected = true;
 		}
-
-		// Create a new path and set its stroke color to black:
-
-		path = createPath({x: self.data.x, y: self.data.y});
-		path.add(event.point);
+		heldPath = createPath({x: self.data.x, y: self.data.y});
+		//heldPath.add(event.point);
 		isDrawing = true;
-		path.segments[0].connectedToInput=true;	
-		console.log(path);
+		heldPath.segments[0].connectedToInput=self;	
+		console.log(heldPath);
+
+		//self.data.connected.push(heldPath)
 		
-		//self.bringToFront();
-		//path.add(event.point);
+		
 	}
+	if(paper.tool == clickTool){
+		if(self.data.powerState){
+			self.data.powerState = false;
+			self.strokeColor = "black"
+			//self.changePowerState()
+			
+		}else{
+			self.data.powerState = true;
+			self.strokeColor = "blue"
+			//self.changePowerState()
+			
+		}
+		self.data.connected().forEach(line => {
+			//line.data.powerLevel++
+			line.data.powerLevel = 0
+			if(self.data.powerState){line.data.powerLevel = 1}
+			line.powerCount()
+			line.powerUpdate(powerCount)
+			updatedLines = []
+			countedLines = []
+			
+			//line.strokeColor = "red"
+		});
+		powerCount = 0
+	}
+
 }
 
 function inputClicked(event, self) {
@@ -116,90 +163,197 @@ function inputClicked(event, self) {
 }
 
 function connectToInput(self) {
-	if(path.segments.length <= 1){
-		path.remove()
-		path = undefined;
+	if(heldPath.segments.length <= 1){
+		heldPath.remove()
+		heldPath = undefined;
 		return;
 	}
-	path.removeSegments(path.segments.length - 1);
-	path.add({x:self.data.x,y:self.data.y});
+	heldPath.removeSegments(heldPath.segments.length - 1);
+	heldPath.add({x:self.data.x,y:self.data.y});
 
-	path.segments[path.segments.length - 1].connectedToInput=true;	
+	heldPath.segments[heldPath.segments.length - 1].connectedToInput=self;	
 
-	path.selected = true;
-	path = undefined;
+	heldPath.selected = true;
+	heldPath = undefined;
 	isDrawing = false;
 }
 
+function getConnectionsAtStart(path) {
+	let hitOptions = {ends:true, segments: false,stroke: false,curves:false, fill: false,tolerance: 1};
+	let hitResults = project.hitTestAll(path.segments[0].point, hitOptions)
+	//console.log(hitResults);
+	return hitResults.filter(e => e.item.id != path.id).map(e => e.item)
+}
+function getConnectionsAtEnd(path) {
+	let hitOptions = {ends:true, segments: false,stroke: false,curves:false, fill: false,tolerance: 1};
+	let hitResults = project.hitTestAll(path.segments[path.segments.length-1].point, hitOptions)
+	//console.log(hitResults);
+	//console.log(path.segments[path.segments.length-1].point);
+	return hitResults.filter(e => e.item.id != path.id).map(e => e.item)
+}
+
+function getConnections(path) {
+	return getConnectionsAtEnd(path).concat(getConnectionsAtStart(path))
+}
+
+
 function deletePath(pathToDelete) {
+	let cS = getConnectionsAtStart(pathToDelete)
+	let cE = getConnectionsAtEnd(pathToDelete)
+	let recursion = []
+
+
 	let hitOptions = {ends:true, segments: false,stroke: false,curves:false, fill: false,tolerance: 0};
-	
+	let bDead = []
 	//first
 	if(pathToDelete.firstSegment.connectedToInput == undefined){
-		let hitResults = project.hitTestAll(pathToDelete.firstSegment.point, hitOptions)
-		let connected = []
-		
-		hitResults.forEach(function(hitResult){
-			//if hit self
-			if(hitResult.item.id == pathToDelete.id){
-				//discard
-				return;
-			}
-			connected.push(hitResult.item)
-	
-			console.log(hitResult);
-			
-		})
+		let connected = getConnectionsAtStart(pathToDelete)
+		console.log("START");
+		console.log(connected);
 		if(connected.length == 2){
+
+			let storedCIs = []
+			if(connected[0].segments[0].connectedToInput){storedCIs.push(connected[0].segments[0].connectedToInput)}
+			if(connected[0].segments[connected[0].segments.length-1].connectedToInput){storedCIs.push(connected[0].segments[connected[0].segments.length-1].connectedToInput)}
+			if(connected[1].segments[0].connectedToInput){storedCIs.push(connected[1].segments[0].connectedToInput)}
+			if(connected[1].segments[connected[1].segments.length-1].connectedToInput){storedCIs.push(connected[1].segments[connected[0].segments.length-1].connectedToInput)}
+
+			console.log(storedCIs);
+
+			/*console.log(connected[0].segments[0].connectedToInput);
+			console.log(connected[0].segments[connected[0].segments.length-1].connectedToInput);
+			console.log(connected[1].segments[0].connectedToInput);
+			console.log(connected[1].segments[connected[0].segments.length-1].connectedToInput);*/
+			
+			
+			//let store = []
+			//store[0] = connected[0].segments[0].connectedToInput
+			//store[1] = connected[0].segments[connected[0].segments.length-1].connectedToInput
 			connected[0].join(connected[1])
+			bDead.push(connected[0])
+			//connected[0].segments[0].connectedToInput = store[0]
+			//connected[0].segments[connected[0].segments.length-1].connectedToInput = store[1]
+
+			storedCIs.forEach(CI => {
+				let CIx = CI.data.x
+				let CIy = CI.data.y
+				if(connected[0].segments[0].point.x == CIx && connected[0].segments[0].point.y == CIy){
+					connected[0].segments[0].connectToInput = CI
+				}
+				if(connected[0].segments[connected[0].segments.length-1].point.x == CIx && connected[0].segments[connected[0].segments.length-1].point.y == CIy){
+					connected[0].segments[connected[0].segments.length-1] = CI
+				}
+			})
+
 			//connected[0].reduce()
 			//connected[0].simplify()
 			//connected[0].flatten(10000000000)
 			//connected[0].smooth({ type: 'catmull-rom', factor: 0.5 });
 		}else if(connected.length == 1){
 			
+			recursion.push(connected[0])
+
+			//deletePath(connected[0])
 			
-			deletePath(connected[0])
-			
-	
+
 		}
 	}
 	
 	//last
 	if(pathToDelete.lastSegment.connectedToInput == undefined){
-		let hitResults = project.hitTestAll(pathToDelete.lastSegment.point, hitOptions)
-		let connected = []
-		hitResults.forEach(function(hitResult){
-			//if hit self
-			if(hitResult.item.id == pathToDelete.id){
-				//discard
-				return;
-			}
-			connected.push(hitResult.item)
-			console.log(hitResult);
-			
-		})
-		console.log(connected.length);
+		let connected = getConnectionsAtEnd(pathToDelete)
+		console.log("END");
+		console.log(connected);
 		if(connected.length == 2){
-			
+			let storedCIs = []
+			if(connected[0].segments[0].connectedToInput){storedCIs.push(connected[0].segments[0].connectedToInput)}
+			if(connected[0].segments[connected[0].segments.length-1].connectedToInput){storedCIs.push(connected[0].segments[connected[0].segments.length-1].connectedToInput)}
+			if(connected[1].segments[0].connectedToInput){storedCIs.push(connected[1].segments[0].connectedToInput)}
+			if(connected[1].segments[connected[1].segments.length-1].connectedToInput){storedCIs.push(connected[1].segments[connected[0].segments.length-1].connectedToInput)}
+
+
+			console.log(storedCIs);
+			/*let store = []
+			console.log(connected[0].segments[0].connectedToInput);
+			console.log(connected[0].segments[connected[0].segments.length-1].connectedToInput);
+			console.log(connected[1].segments[0].connectedToInput);
+			console.log(connected[1].segments[connected[0].segments.length-1].connectedToInput);*/
+			//store[0] = connected[0].segments[0].connectedToInput
+			//store[1] = connected[0].segments[connected[0].segments.length-1].connectedToInput
 			connected[0].join(connected[1])
+			bDead.push(connected[0])
+			/*connected[0].segments[0].connectedToInput = store[0]
+			connected[0].segments[connected[0].segments.length-1].connectedToInput = store[1]*/
 			//connected[0].reduce()
 			//connected[0].simplify()
 			//connected[0].flatten(10000000000)
 			//connected[0].smooth({ type: 'catmull-rom', factor: 0.5 });
+			storedCIs.forEach(CI => {
+				let CIx = CI.data.x
+				let CIy = CI.data.y
+				if(connected[0].segments[0].point.x == CIx && connected[0].segments[0].point.y == CIy){
+					connected[0].segments[0].connectToInput = CI
+				}
+				if(connected[0].segments[connected[0].segments.length-1].point.x == CIx && connected[0].segments[connected[0].segments.length-1].point.y == CIy){
+					connected[0].segments[connected[0].segments.length-1].connectToInput = CI
+				}
+			})
 
 		}else if(connected.length == 1){
 			//if(connected[0].lastSegment.connectedToInput == undefined){
-				deletePath(connected[0])
+			recursion.push(connected[0])
+			//deletePath(connected[0])
 			//}
 			
 
 		}
 		//var hitResult = project.hitTestAll(event.target.lastSegment.point, hitOptions);
 	}
-	pathToDelete.remove();
+	console.log("LOG AT FULLEND");
 	
+	updatedLines = []
+	countedLines = []
+	powerCount = 0
+	console.log(pathToDelete);
+
+
+	bDead.forEach(line => {
+		//line.data.powerLevel++
+		console.log(line)
+		line.data.powerLevel = 0
+		line.powerCount()
+		line.powerUpdate(powerCount)
+		
+		//line.strokeColor = "red"
+	});
+	updatedLines = []
+	countedLines = []
+	powerCount = 0
+	/*cE.forEach(line => {
+		//line.data.powerLevel++
+		console.log(line)
+		
+		line.data.powerLevel = 0
+		line.powerCount()
+		line.powerUpdate(powerCount)
+		
+		//line.strokeColor = "red"
+	});*/
+	updatedLines = []
+	countedLines = []
+	powerCount = 0
+	console.log("LOG AT FULLEND1");
+	pathToDelete.remove();
+	if(recursion){
+		recursion.forEach(e => {
+			deletePath(e)
+		})
+	}
 }
+
+let updatedLines = []
+let countedLines = []
+let powerCount = 0
 function createPath(position,segmentsArray) {
 	
 	
@@ -210,7 +364,7 @@ function createPath(position,segmentsArray) {
 		segments = segmentsArray;
 	}
 
-	path = new Path({
+	let cPath = new Path({
 		segments: segments,
 		strokeColor: 'black',
 		// Select the path, so we can see its segment points:
@@ -218,32 +372,142 @@ function createPath(position,segmentsArray) {
 		strokeWidth: 5,
 		data: {connections: new Array(),parentCont: null}
 	});
-	path.data.objectType = "line"
+	cPath.data.objectType = "line"
 	//path.onMouseDown = function(event) {
-	path.clickedLineDraw = function(event, self,location) {
+	cPath.data.powerLevel = 0;
+	cPath.powerUpdate = function(level) {
+		
+
+		getConnections(cPath).forEach(line => {
+			if(!updatedLines.includes(line.id)){
+				updatedLines.push(line.id)
+				line.data.powerLevel = level
+				line.powerUpdate(level)	
+			}
+		})
+		if(cPath.data.powerLevel >= 1 ){
+			cPath.turnOn()
+		}
+		if(cPath.data.powerLevel == 0){
+			cPath.turnOff()
+		}
+		
+	}
+	cPath.powerCount = function() {
+		
+		/*getIO(){
+			let hitOptions = {ends:false, segments: false,stroke: false,curves:false, fill: true,tolerance: 0};
+			return hitResults = project.hitTestAll(event.point, hitOptions)
+		}*/
+		if(cPath.segments[0].connectedToInput){
+			console.log("a");
+			if(cPath.segments[0].connectedToInput.data.objectType === "output"){
+				console.log("b");
+
+				if(cPath.segments[0].connectedToInput.data.powerState){
+					console.log("c");
+
+					powerCount++
+				}
+			}
+			
+		}
+		if(cPath.segments[cPath.segments.length - 1].connectedToInput){
+			if(cPath.segments[cPath.segments.length - 1].connectedToInput.data.objectType === "output"){
+				if(cPath.segments[cPath.segments.length - 1].connectedToInput.data.powerState){
+					powerCount++
+				}
+			}
+		}
+		getConnections(cPath).forEach(line => {
+			if(!countedLines.includes(line.id)){
+				countedLines.push(line.id)
+				
+				line.powerCount()	
+			}
+		})
+		
+		
+	}
+	cPath.turnOff = function(){
+		cPath.strokeColor = "black"
+	}
+	cPath.turnOn = function(){
+		cPath.strokeColor = "blue"
+	}
+	let gwseh;
+	cPath.onMouseDown = function(event) {
+		if(paper.tool == clickTool){
+			
+			if(cPath.strokeColor != "green"){
+				gwseh = cPath.strokeColor
+				cPath.strokeColor = "green"
+			}else{
+				cPath.strokeColor = gwseh
+			}
+			
+		}
+	}
+	cPath.clickedLineDraw = function(event, self,location) {
 		if(isDrawing){
 			//adding drawn path to self (path)
-			if(path.segments.length <= 1){
-				path.remove()
-				path = undefined;
+			if(heldPath.segments.length <= 1){
+				heldPath.remove()
+				heldPath = undefined;
 				return;
 			}
 
 
 			console.log("b");
 			
-			path.removeSegments(path.segments.length - 1);
-			path.add(self.getNearestPoint(event.point));
+			heldPath.removeSegments(heldPath.segments.length - 1);
+			heldPath.add(self.getNearestPoint(event.point));
 			var location = location;
 			var lIndx = location.index;
+			
+			
+			
+			
+			
+			
 			segment = self.insert(location.index + 1, self.getNearestPoint(event.point));
 			
-			createPath(undefined, self.segments.slice(lIndx + 1))
+
+
+			aPath = createPath(undefined, self.segments.slice(lIndx + 1))
+			if(self.lastSegment.connectedToInput){
+				aPath.segments[aPath.segments.length - 1].connectedToInput = self.lastSegment.connectedToInput;
+			}
+			let store;
+			if(self.firstSegment.connectedToInput){
+				 store = self.firstSegment.connectedToInput
+			}
 			self.segments = self.segments.slice(0,lIndx + 2)
+			self.segments[0].connectedToInput = store
 			//event.target.smooth();
 
-			path.selected = true;
-			path = undefined;
+			updatedLines = []
+			countedLines = []
+			powerCount = 0
+
+			aPath.data.powerLevel = 0
+			aPath.powerCount()
+			aPath.powerUpdate(powerCount)
+
+			updatedLines = []
+			countedLines = []
+			powerCount = 0
+
+			self.data.powerLevel = 0
+			self.powerCount()
+			self.powerUpdate(powerCount)
+
+			updatedLines = []
+			countedLines = []
+			powerCount = 0
+
+			aPath.selected = true;
+			heldPath = undefined;
 			isDrawing = false;
 		} else {
 			console.log("you started drawing from path");
@@ -255,10 +519,7 @@ function createPath(position,segmentsArray) {
 			};
 			var hitResult = project.hitTest(self.getNearestPoint(event.point), hitOptions);
 			if (hitResult) {
-				if (hitResult.type == 'segment') {
-					console.log("a");
-					segment = hitResult.segment;
-				} else if (hitResult.type == 'stroke') {
+				if (hitResult.type == 'stroke') {
 					console.log("b");
 
 					var location = hitResult.location;
@@ -267,22 +528,56 @@ function createPath(position,segmentsArray) {
 					
 					segment = self.insert(location.index + 1, self.getNearestPoint(event.point));
 
-					
+					/*
 					createPath(undefined, self.segments.slice(lIndx + 1))
+					self.segments = self.segments.slice(0,lIndx + 2)*/
+					aPath = createPath(undefined, self.segments.slice(lIndx + 1))
+					if(self.lastSegment.connectedToInput){
+						aPath.segments[aPath.segments.length - 1].connectedToInput = self.lastSegment.connectedToInput;
+					}
+					let store;
+					if(self.firstSegment.connectedToInput){
+						 store = self.firstSegment.connectedToInput
+					}
 					self.segments = self.segments.slice(0,lIndx + 2)
+					self.segments[0].connectedToInput = store
+
+					updatedLines = []
+					countedLines = []
+					powerCount = 0
+		
+					aPath.data.powerLevel = 0
+					aPath.powerCount()
+					aPath.powerUpdate(powerCount)
+		
+					updatedLines = []
+					countedLines = []
+					powerCount = 0
+		
+					self.data.powerLevel = 0
+					self.powerCount()
+					self.powerUpdate(powerCount)
+		
+					updatedLines = []
+					countedLines = []
+					powerCount = 0
+
+
+
+
 				}
 			}
-			createPath(path.getNearestPoint(event.point));
-			path.add(event.point);
+			heldPath = createPath(cPath.getNearestPoint(event.point));
+			heldPath.add(event.point);
 			
 			isDrawing = true
 		}
 	}
-	path.clickedDelete = function(event, self){
-			deletePath(self)
+	cPath.clickedDelete = function(event, self){
+			deletePath(cPath)
 	}
 
-	return path;
+	return cPath;
 }
 
 
@@ -303,7 +598,8 @@ view.onKeyDown = function(event) {
 		console.log(project.activeLayer.children[4].data.parentCont)
 	}
 	if(event.key == "o") {
-
+		console.log("switched to test");
+		testTool.activate()
 	}
 	if(event.key == "e"){
 		console.log("switched to LineDrawTool");
@@ -321,15 +617,20 @@ view.onKeyDown = function(event) {
 		console.log("delete tool activated")
 
 	}
+	if(event.key == "c"){
+		releaseDrawing()
+		clickTool.activate()
+		console.log("click tool activated")
+	}
 }
 
 function releaseDrawing(){
 	if(isDrawing){
-		path.removeSegment(path.segments.length -1);
-		if(path.segments.length <= 1){
-			path.remove();
+		heldPath.removeSegment(heldPath.segments.length -1);
+		if(heldPath.segments.length <= 1){
+			heldPath.remove();
 		}
-		path = undefined;
+		heldPath = undefined;
 		isDrawing = false;
 	}
 }
@@ -349,10 +650,10 @@ lineDrawTool.onMouseDown = function(event) {
 		
 	})
 
-	if(isDrawing && path && !hitLine){	
-		path.removeSegment(path.segments.length -1);
-		path.add(event.point);
-		path.add(event.point);
+	if(isDrawing && heldPath && !hitLine){	
+		//heldPath.removeSegment(heldPath.segments.length -1);
+		//heldPath.add(event.point);
+		heldPath.add(event.point);
 		
 		//lineDrawTool.onMouseMove(event)
 	}
@@ -382,8 +683,8 @@ function hitTestOnMouseDown(event){
 		tolerance: 15
 	};
 	var hitResults = project.hitTestAll(event.point, hitOptions);
-	if(path){
-		return hitResults.filter(e => e.item.id != path.id)
+	if(heldPath){
+		return hitResults.filter(e => e.item.id != heldPath.id)
 	}else{
 		return hitResults;
 	}
@@ -392,24 +693,24 @@ function hitTestOnMouseDown(event){
 // While the user drags the mouse, points are added to the path
 // at the position of the mouse:
 lineDrawTool.onMouseMove = function(event) {
-	if(path){
-		if(path.segments.length <= 1){
-			path.remove()
-			path = undefined;
-			return;
+	if(heldPath){
+		if(heldPath.segments.length <= 1){
+			heldPath.remove()
+			heldPath = undefined;
+			//return;
 		}
 
-		path.removeSegment(path.segments.length - 1);
+		heldPath.removeSegment(heldPath.segments.length - 1);
 		//console.log(path.segments[path.segments.length - 1].point);
 
 		//we need to do this the hard boilerplate way because we dont use paperscript :C :C :C
 		//This clownfest draws the line behind the cursor
-		let a = {x:path.segments[path.segments.length - 1].point.x, y:path.segments[path.segments.length - 1].point.y}
+		let a = {x:heldPath.segments[heldPath.segments.length - 1].point.x, y:heldPath.segments[heldPath.segments.length - 1].point.y}
 		let b = {x:event.point.x,y:event.point.y};
 		let vector = new Point(b.x - a.x,b.y - a.y);
 		vector.length = vector.length - 20;
 		c = {x: a.x + vector.x, y: a.y + vector.y};
-		path.add(c);
+		heldPath.add(c);
 
 	}
 	
@@ -435,4 +736,12 @@ lineDrawTool.onMouseUp = function(event) {
 	var percentage = 100 - Math.round(newSegmentCount / segmentCount * 100);
 	textItem.content = difference + ' of the ' + segmentCount + ' segments were removed. Saving ' + percentage + '%';
 	*/
+}
+
+testTool.onMouseDown = function(event) {
+	let hitOptions = {ends:true, segments: false,stroke: false,curves:false, fill: false,tolerance: 10};
+	let hitResults = project.hitTestAll(event.point, hitOptions)
+	console.log("WE HIT:");
+	console.log(hitResults);
+	//return hitResults.filter(e => e.item.id != path.id).map(e => e.item)
 }
