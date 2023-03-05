@@ -139,7 +139,7 @@ function outputClicked(event, self) {
 		self.data.connected().forEach(line => {
 			//line.data.powerLevel++
 			line.data.powerLevel = 0
-			if(self.data.powerState){line.data.powerLevel = 1}
+			/*if(self.data.powerState){line.data.powerLevel = 1}*/
 			line.powerCount()
 			line.powerUpdate(powerCount)
 			updatedLines = []
@@ -200,6 +200,7 @@ function getConnections(path) {
 function deletePath(pathToDelete) {
 	let cS = getConnectionsAtStart(pathToDelete)
 	let cE = getConnectionsAtEnd(pathToDelete)
+	let cA = getConnections(pathToDelete)
 	let recursion = []
 
 
@@ -230,7 +231,7 @@ function deletePath(pathToDelete) {
 			//store[0] = connected[0].segments[0].connectedToInput
 			//store[1] = connected[0].segments[connected[0].segments.length-1].connectedToInput
 			connected[0].join(connected[1])
-			bDead.push(connected[0])
+			//bDead.push(connected[0])
 			//connected[0].segments[0].connectedToInput = store[0]
 			//connected[0].segments[connected[0].segments.length-1].connectedToInput = store[1]
 
@@ -238,13 +239,13 @@ function deletePath(pathToDelete) {
 				let CIx = CI.data.x
 				let CIy = CI.data.y
 				if(connected[0].segments[0].point.x == CIx && connected[0].segments[0].point.y == CIy){
-					connected[0].segments[0].connectToInput = CI
+					connected[0].segments[0].connectedToInput = CI
 				}
 				if(connected[0].segments[connected[0].segments.length-1].point.x == CIx && connected[0].segments[connected[0].segments.length-1].point.y == CIy){
-					connected[0].segments[connected[0].segments.length-1] = CI
+					connected[0].segments[connected[0].segments.length-1].connectedToInput = CI
 				}
 			})
-
+			bDead.push(connected[0])
 			//connected[0].reduce()
 			//connected[0].simplify()
 			//connected[0].flatten(10000000000)
@@ -281,7 +282,7 @@ function deletePath(pathToDelete) {
 			//store[0] = connected[0].segments[0].connectedToInput
 			//store[1] = connected[0].segments[connected[0].segments.length-1].connectedToInput
 			connected[0].join(connected[1])
-			bDead.push(connected[0])
+			
 			/*connected[0].segments[0].connectedToInput = store[0]
 			connected[0].segments[connected[0].segments.length-1].connectedToInput = store[1]*/
 			//connected[0].reduce()
@@ -292,13 +293,13 @@ function deletePath(pathToDelete) {
 				let CIx = CI.data.x
 				let CIy = CI.data.y
 				if(connected[0].segments[0].point.x == CIx && connected[0].segments[0].point.y == CIy){
-					connected[0].segments[0].connectToInput = CI
+					connected[0].segments[0].connectedToInput = CI
 				}
 				if(connected[0].segments[connected[0].segments.length-1].point.x == CIx && connected[0].segments[connected[0].segments.length-1].point.y == CIy){
-					connected[0].segments[connected[0].segments.length-1].connectToInput = CI
+					connected[0].segments[connected[0].segments.length-1].connectedToInput = CI
 				}
 			})
-
+			bDead.push(connected[0])
 		}else if(connected.length == 1){
 			//if(connected[0].lastSegment.connectedToInput == undefined){
 			recursion.push(connected[0])
@@ -316,16 +317,32 @@ function deletePath(pathToDelete) {
 	powerCount = 0
 	console.log(pathToDelete);
 
-
+	pathToDelete.remove();
 	bDead.forEach(line => {
 		//line.data.powerLevel++
 		console.log(line)
 		line.data.powerLevel = 0
 		line.powerCount()
+		console.log(powerCount)
 		line.powerUpdate(powerCount)
-		
+		console.log(line.data.powerLevel)		
 		//line.strokeColor = "red"
 	});
+	updatedLines = []
+	countedLines = []
+	powerCount = 0
+
+	if(bDead.length == 0){
+		cA.forEach(line => {
+			//line.data.powerLevel++
+			console.log(line)
+			line.data.powerLevel = 0
+			line.powerCount()
+			line.powerUpdate(powerCount)
+			
+			//line.strokeColor = "red"
+		})
+	}
 	updatedLines = []
 	countedLines = []
 	powerCount = 0
@@ -343,7 +360,7 @@ function deletePath(pathToDelete) {
 	countedLines = []
 	powerCount = 0
 	console.log("LOG AT FULLEND1");
-	pathToDelete.remove();
+	
 	if(recursion){
 		recursion.forEach(e => {
 			deletePath(e)
@@ -377,11 +394,11 @@ function createPath(position,segmentsArray) {
 	cPath.data.powerLevel = 0;
 	cPath.powerUpdate = function(level) {
 		
-
+		cPath.data.powerLevel = level
 		getConnections(cPath).forEach(line => {
 			if(!updatedLines.includes(line.id)){
 				updatedLines.push(line.id)
-				line.data.powerLevel = level
+				//line.data.powerLevel = level
 				line.powerUpdate(level)	
 			}
 		})
@@ -413,8 +430,11 @@ function createPath(position,segmentsArray) {
 			
 		}
 		if(cPath.segments[cPath.segments.length - 1].connectedToInput){
+			console.log("1a");
 			if(cPath.segments[cPath.segments.length - 1].connectedToInput.data.objectType === "output"){
+				console.log("1b");
 				if(cPath.segments[cPath.segments.length - 1].connectedToInput.data.powerState){
+					console.log("1c");
 					powerCount++
 				}
 			}
@@ -554,9 +574,9 @@ function createPath(position,segmentsArray) {
 					countedLines = []
 					powerCount = 0
 		
-					self.data.powerLevel = 0
-					self.powerCount()
-					self.powerUpdate(powerCount)
+					//self.data.powerLevel = 0
+					//self.powerCount()
+					//self.powerUpdate(powerCount)
 		
 					updatedLines = []
 					countedLines = []
