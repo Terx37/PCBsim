@@ -57,16 +57,29 @@ function makeIO(parent,i,posX, posY,radius = 20,width = 7,fillColor = "yellow",s
 	io.onFrame = function() {
 		io.bringToFront();
 	}
-	io.addConnected = function(connected) {
-		if(!io.data.connected.includes(connected)){
-			io.data.connected.push(connected)
+	io.addConnected = function(connected, fromStartOrEnd) {
+
+		if(!io.data.connected.some(e => e.c.id == connected.id)){
+			io.data.connected.push({c:connected,f:fromStartOrEnd})
 		}
+		/*
+		if(!io.data.connected.includes(connected)){
+			io.data.connected.push({c:connected,f:fromStartOrEnd})
+		}
+		*/
 	}
 	io.removeConnected = function(connected) {
+		let ia
+		if(io.data.connected.some((e,i) => {if(e.c.id == connected.id){ia = i;return true;}})){
+			io.data.connected.splice(ia, 1)
+		}
+
+		/*
 		if(io.data.connected.includes(connected)){
 			io.data.connected.splice(io.data.connected.indexOf(connected), 1)
 			return "io"
 		}
+		*/
 	}
 	return io;
 }
@@ -135,8 +148,8 @@ function outputClicked(event, self) {
 		heldPath = createPath({x: self.data.x, y: self.data.y});
 
 		//NEW
-		self.addConnected(heldPath)
-		heldPath.addConnectedStart(self)
+		self.addConnected(heldPath,"start")
+		heldPath.addConnectedStart(self,"con")
 
 
 		//heldPath.add(event.point);
@@ -197,8 +210,8 @@ function connectToInput(self) {
 	heldPath.add({x:self.data.x,y:self.data.y});
 
 	//heldPath.segments[heldPath.segments.length - 1].connectedToInput=self;	
-	heldPath.addConnectedEnd(self)
-	self.addConnected(heldPath)
+	heldPath.addConnectedEnd(self, "io")
+	self.addConnected(heldPath,"end")
 
 	heldPath.selected = true;
 	heldPath = undefined;
@@ -233,33 +246,33 @@ function deletePath(pathTD) {
 			let A = EndStart[0]
 			let Ainner
 			let Aouter
-			if(A.data.conEnd.includes(pathTD)){
-				Ainner = A.data.conEnd
-				Aouter = A.data.conStart
+			if(A.data.conEnd.some(e => e.c.id == pathTD.id)){
+				Ainner = A.data.conEnd.slice()
+				Aouter = A.data.conStart.slice()
 			}else{
-				Ainner = A.data.conStart
-				Aouter = A.data.conEnd
+				Ainner = A.data.conStart.slice()
+				Aouter = A.data.conEnd.slice()
 			}
 			let B = EndStart[1]
 			console.log(EndStart.slice());
 			let Binner
 			let Bouter
-			if(B.data.conEnd.includes(pathTD)){
+			if(B.data.conEnd.some(e => e.c.id == pathTD.id)){
 				console.log("TWOA");
 				Binner = B.data.conEnd
 				Bouter = B.data.conStart
 				//B.data.conStart.forEach((e)=>{
-
+					let r = pathTD.removeConnected(B)
 					let resp = B.data.conStart[0].removeConnected(B)
 					console.log(EndStart.slice());
 
 					console.log(resp);
 					if (resp == "end"){
-						B.data.conStart[0].addConnectedEnd(A)
+						B.data.conStart[0].addConnectedEnd(A,"end")
 						console.log("A");
 					}
 					if (resp == "start"){
-						B.data.conStart[0].addConnectedStart(A)
+						B.data.conStart[0].addConnectedStart(A,"end")
 						console.log("B");
 
 					}
@@ -270,17 +283,23 @@ function deletePath(pathTD) {
 				console.log("TWOB");
 				Binner = B.data.conStart
 				Bouter = B.data.conEnd
-				//B.data.conEnd.forEach((e)=>{
-					let resp = B.data.conEnd[0].removeConnected(B)
+				B.data.conEnd.forEach((e)=>{
+					let resp
+					if(e.f == "start"){
+						resp = e.c.removeConnectedStart(B)
+					}else if(e.f == "end"){
+						resp = e.c.removeConnectedEnd(B)
+
+					}
 					if (resp == "end"){
-						B.data.conEnd[0].addConnectedEnd(A)
+						e.c.addConnectedEnd(A,"start")
 						console.log("A1");
 					}
 					if (resp == "start"){
-						B.data.conEnd[0].addConnectedStart(A)
+						e.c.addConnectedStart(A,"start")
 						console.log("B1");
 					}
-				//})
+				})
 			}
 
 			//EndStart[1] = Binner
@@ -315,6 +334,10 @@ let updatedLines = []
 let countedLines = []
 let powerCount = 0
 
+
+
+
+
 function createPath(position,segmentsArray) {
 	
 	
@@ -339,27 +362,47 @@ function createPath(position,segmentsArray) {
 	cPath.data.conStart = []
 	cPath.data.conEnd = []
 
-	cPath.addConnectedStart = function(connected) {
-		if(!cPath.data.conStart.includes(connected)){
-			cPath.data.conStart.push(connected)
+
+	//we tell the function if we pushed this connection from its start or from its end
+	//so that if 
+	cPath.addConnectedStart = function(connected, fromStartOrEnd) {
+		//if(!cPath.data.conStart.includes(connected)){
+
+		if(!cPath.data.conStart.some(e => e.c.id == connected.id)){
+			cPath.data.conStart.push({c: connection, f: fromStartOrEnd})
 		}
 	}
-	cPath.addConnectedEnd = function(connected) {
-		if(!cPath.data.conEnd.includes(connected)){
-			cPath.data.conEnd.push(connected)
-		}
-	}
-	cPath.removeConnected = function(connected) {
+	cPath.addConnectedEnd = function(connected, fromStartOrEnd) {
+		//if(!cPath.data.conEnd.includes(connected)){
 		
-		if(cPath.data.conEnd.includes(connected)){
+		if(!cPath.data.conEnd.some(e => e.c.id == connected.id)){
+			cPath.data.conEnd.push({c: connection, f: fromStartOrEnd})
+		}
+	}
+	cPath.removeConnectedStart = function(connected) {
+		/*if(cPath.data.conEnd.includes(connected)){
 			cPath.data.conEnd.splice(cPath.data.conEnd.indexOf(connected), 1)
 			return "end"
+		}*/
+		let ib
+		if (cPath.data.conStart.some((e,i) => {if(e.c.id == connected.id){ib=i;return true}})) {
+			cPath.data.conStart.splice(ib, 1)
+			return "start"
 		}
-	
-	
+		/*
 		if(cPath.data.conStart.includes(connected)){
 			cPath.data.conStart.splice(cPath.data.conEnd.indexOf(connected), 1)
 			return "start"
+		}
+		*/
+	}
+	cPath.removeConnectedEnd = function(connected, instigatorStartOrEnd) {
+		
+		let ia
+		
+		if (cPath.data.conEnd.some((e,i) => {if(e.c.id == connected.id){ia=i;return true}})) {
+			cPath.data.conEnd.splice(ia, 1)
+			return "end"
 		}
 		
 	}
@@ -625,7 +668,8 @@ var textItem = new PointText({
 	point: new Point(20, 30),
 	fillColor: 'black',
 });
-
+var debugTextStart
+var debugTextEnd
 
 
 var prevTool
@@ -782,8 +826,27 @@ testTool.onMouseDown = function(event) {
 	let hitResults = project.hitTestAll(event.point, hitOptions)
 	hitResults.forEach((e)=>{
 		e.item.strokeColor = "green";
+
+		if(debugTextEnd){
+			debugTextEnd.remove();
+		}
+		if(debugTextStart){
+			debugTextStart.remove();
+		} 
+		debugTextStart = new PointText({
+			content: 'Click and drag to draw a line.',
+			point: new Point(e.item.parent.segments[0].point.x + 20, e.item.parent.segments[0].point.y +  30),
+			fillColor: 'black',
+		});
+		/*debugTextEnd = new PointText({
+			content: 'Click and drag to draw a line.',
+			point: new Point(20, 30),
+			fillColor: 'black',
+		});*/
+
 	})
 	console.log("WE HIT:");
 	console.log(hitResults);
+	
 	//return hitResults.filter(e => e.item.id != path.id).map(e => e.item)
 }
