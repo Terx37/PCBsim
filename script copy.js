@@ -149,7 +149,7 @@ function outputClicked(event, self) {
 
 		//NEW
 		self.addConnected(heldPath,"start")
-		heldPath.addConnectedStart(self,"con")
+		heldPath.addConnectedStart(self,"io")
 
 
 		//heldPath.add(event.point);
@@ -241,11 +241,18 @@ function deletePath(pathTD) {
 
 	function deleteAndWeld(EndStart){
 		if(EndStart.length == 2){
+
+			EndStart.forEach((e)=>{
+				
+				e.c.removeConnected({c:pathTD,f:e.f})
+				
+			})
 			console.log("ONE");
 			console.log(EndStart.slice());
-			let A = EndStart[0]
+			let A = EndStart[0].c
 			let Ainner
 			let Aouter
+			console.log(A.data.conEnd.slice());
 			if(A.data.conEnd.some(e => e.c.id == pathTD.id)){
 				Ainner = A.data.conEnd.slice()
 				Aouter = A.data.conStart.slice()
@@ -257,7 +264,19 @@ function deletePath(pathTD) {
 			console.log(EndStart.slice());
 			let Binner
 			let Bouter
-			if(B.data.conEnd.some(e => e.c.id == pathTD.id)){
+
+			if(EndStart[0].f == "start"){
+				
+			}
+
+			
+			if(EndStart[1].f == "start"){
+				Bouter = EndStart[1].c.data.conEnd.slice()
+			}else if(EndStart[1].f == "end"){
+				Bouter = EndStart[1].c.data.conStart.slice()
+			}
+			EndStart[0].c.removeConnected({c:EndStart[1].c,f:EndStart[1].f})
+			/*if(B.data.conEnd.some(e => e.c.id == pathTD.id)){
 				console.log("TWOA");
 				Binner = B.data.conEnd
 				Bouter = B.data.conStart
@@ -300,16 +319,31 @@ function deletePath(pathTD) {
 						console.log("B1");
 					}
 				})
-			}
+			}*/
+
+			/*cPath.data.conEnd.forEach((e)=>{
+				
+				e.c.removeConnected({c:cPath,f:e.f})
+				
+			})*/
 
 			//EndStart[1] = Binner
 			console.log(EndStart.slice());
-			EndStart[0].join(EndStart[1])
-			A.data.conStart = Aouter
-			A.data.conEnd = Binner
+			Bouter.forEach((e)=>{
+				
+				e.c.removeConnected({c:EndStart[1],f:e.f})
+				
+			})
+			EndStart[0].c.join(EndStart[1].c)
+			EndStart[0].c.data.conStart = Aouter
+			EndStart[0].c.data.conEnd = Bouter
+			//A.data.conStart = Aouter
+			//A.data.conEnd = Binner
 		}else{
 			pathTD.data.conEnd.forEach((e)=>{
-				e.removeConnected(pathTD)
+				e.c.removeConnected({c:pathTD,f:e.f})
+				//e.c.removeConnected(pathTD)
+
 			})
 		}
 	}
@@ -369,14 +403,34 @@ function createPath(position,segmentsArray) {
 		//if(!cPath.data.conStart.includes(connected)){
 
 		if(!cPath.data.conStart.some(e => e.c.id == connected.id)){
-			cPath.data.conStart.push({c: connection, f: fromStartOrEnd})
+			cPath.data.conStart.push({c: connected, f: fromStartOrEnd})
 		}
 	}
 	cPath.addConnectedEnd = function(connected, fromStartOrEnd) {
 		//if(!cPath.data.conEnd.includes(connected)){
 		
 		if(!cPath.data.conEnd.some(e => e.c.id == connected.id)){
-			cPath.data.conEnd.push({c: connection, f: fromStartOrEnd})
+			cPath.data.conEnd.push({c: connected, f: fromStartOrEnd})
+		}
+	}
+	cPath.removeConnected = function(connected) {
+		if(connected.f == "start"){
+			let ib
+			if (cPath.data.conStart.some((e,i) => {if(e.c.id == connected.id){ib=i;return true}})) {
+				console.log("removed from start: ");
+				console.log(cPath.data.conStart[ib].splice());
+				cPath.data.conStart.splice(ib, 1)
+				
+				//return "end"
+			}
+		}else if (connected.f == "end"){
+			let ib
+			if (cPath.data.conEnd.some((e,i) => {if(e.c.id == connected.id){ib=i;return true}})) {
+				console.log("removed from end: ");
+				console.log(cPath.data.conStart[ib].splice());
+				cPath.data.conEnd.splice(ib, 1)
+				//return "end"
+			}
 		}
 	}
 	cPath.removeConnectedStart = function(connected) {
@@ -506,23 +560,23 @@ function createPath(position,segmentsArray) {
 			//last half
 			pathB = createPath(undefined, cPath.segments.slice(lIndx + 1))
 			pathB.data.conEnd = cPath.data.conEnd.slice()
-			pathB.data.conStart = [cPath, heldPath]
+			pathB.data.conStart = [{c:cPath,f:"end"}, {c:heldPath,f:"end"}]
 			
 			//mod connections
 			//old end before we shorten the cPath
 			cPath.data.conEnd.forEach((e)=>{
 				
-				e.removeConnected(cPath)
+				e.c.removeConnected({c:cPath,f:e.f})
 				
 			})
 
 			//first half
 			cPath.segments = cPath.segments.slice(0,lIndx + 2)
 			//cPath.data.conStart = cPath.data.conStart.slice()
-			cPath.data.conEnd = [pathB, heldPath]
+			cPath.data.conEnd = [{c:pathB,f:"start"}, {c:heldPath,f:"end"}]
 			
 			//drawn path
-			heldPath.data.conEnd = [cPath, pathB]
+			heldPath.data.conEnd = [{c:cPath,f:"end"}, {c:pathB,f:"start"}]
 
 			/*
 			aPath = createPath(undefined, cPath.segments.slice(lIndx + 1))
@@ -580,38 +634,54 @@ function createPath(position,segmentsArray) {
 			//last half
 			pathB = createPath(undefined, cPath.segments.slice(lIndx + 1))
 			pathB.data.conEnd = cPath.data.conEnd.slice()
-			pathB.data.conStart = [cPath, heldPath]
+
+			
+
+			pathB.data.conStart = [{c:cPath,f:"end"}, {c:heldPath,f:"start"}]
 			
 			//mod connections
 			//old end before we shorten the cPath
 			cPath.data.conEnd.forEach((e)=>{
-				if(e.data)
-				if(e.data.conEnd){
-					if(e.data.conEnd.includes(cPath)){
-						e.data.conEnd.splice(e.data.conEnd.indexOf(cPath), 1)
+				if(e.data){}
+				e.c.removeConnected({c:cPath,f:e.f})
+				/*if(e.f=="start"){
+					e.c.data.conStart.removeConnectedStart(e)
+				}
+				if(e.f=="end"){
+					e.c.data.conStart.removeConnectedStart(e)
+				}
+				if(e.f=="io"){
+					e.c.data.conStart.removeConnectedStart(e)
+				}*/
+				/*
+				if(e.c.data.conEnd){
+					if(e.c.data.conEnd.includes(cPath)){
+						e.c.data.conEnd.splice(e.c.data.conEnd.indexOf(cPath), 1)
 					}
 				}
-				if(e.data.conStart){
-					if(e.data.conStart.includes(cPath)){
-						e.data.conStart.splice(e.data.conEnd.indexOf(cPath), 1)
+				if(e.c.data.conStart){
+					if(e.c.data.conStart.includes(cPath)){
+						e.c.data.conStart.splice(e.c.data.conEnd.indexOf(cPath), 1)
 					}
 				}
-				if(e.data.connected){
-					if(e.data.connected.includes(cPath)){
-						e.data.connected.splice(e.data.connected.indexOf(cPath), 1)
+				if(e.c.data.connected){
+					if(e.c.data.connected.includes(cPath)){
+						e.c.data.connected.splice(e.c.data.connected.indexOf(cPath), 1)
 					}
 				}
+				*/
 			})
 
 			//first half
 			
 			cPath.segments = cPath.segments.slice(0,lIndx + 2)
 			//cPath.data.conStart = cPath.data.conStart.slice()
-			cPath.data.conEnd = [pathB, heldPath]
+
+			cPath.data.conEnd = [{c:pathB,f:"start"}, {c:heldPath,f:"start"}]
 			
 			//drawn path
-			
-			heldPath.data.conStart = [cPath, pathB]
+
+			heldPath.data.conStart = [{c:cPath,f:"end"}, {c:pathB,f:"start"}]
 			/*
 			createPath(undefined, self.segments.slice(lIndx + 1))
 			self.segments = self.segments.slice(0,lIndx + 2)*/
@@ -780,7 +850,7 @@ lineDrawTool.onMouseMove = function(event) {
 		if(heldPath.segments.length <= 1){
 			heldPath.remove()
 			heldPath = undefined;
-			//return;
+			return;
 		}
 
 		heldPath.removeSegment(heldPath.segments.length - 1);
@@ -820,22 +890,35 @@ lineDrawTool.onMouseUp = function(event) {
 	textItem.content = difference + ' of the ' + segmentCount + ' segments were removed. Saving ' + percentage + '%';
 	*/
 }
-
+let oHit
 testTool.onMouseDown = function(event) {
 	let hitOptions = {ends:false, segments: true,stroke: true,curves:false, fill: false,tolerance: 10};
 	let hitResults = project.hitTestAll(event.point, hitOptions)
+
 	hitResults.forEach((e)=>{
 		e.item.strokeColor = "green";
-
+		if(oHit){oHit.strokeColor = "black"}
+		oHit = e.item
 		if(debugTextEnd){
 			debugTextEnd.remove();
 		}
 		if(debugTextStart){
 			debugTextStart.remove();
 		} 
+		//let text1 = e.item.data.conStart[0].c+" : "+e.item.data.conStart[0].f+" - "+e.item.data.conStart[1].c+" : "+e.item.data.conStart[1].f+" - "+e.item.data.conStart[2].c+" : "+e.item.data.conStart[2].f
+		//let text2 = e.item.data.conEnd[0].c+" : "+e.item.data.conEnd[0].f+" - "+e.item.data.conEnd[1].c+" : "+e.item.data.conEnd[1].f+" - "+e.item.data.conEnd[2].c+" : "+e.item.data.conEnd[2].f
+		console.log("S: ");
+		console.log(e.item.data.conStart.slice())
+		console.log("E: ");
+		console.log(e.item.data.conEnd.slice())
 		debugTextStart = new PointText({
-			content: 'Click and drag to draw a line.',
-			point: new Point(e.item.parent.segments[0].point.x + 20, e.item.parent.segments[0].point.y +  30),
+			content: "START",
+			point: new Point(e.item.segments[0].point.x + 20, e.item.segments[0].point.y +  30),
+			fillColor: 'black',
+		});
+		debugTextEnd = new PointText({
+			content: "END",
+			point: new Point(e.item.segments[e.item.segments.length-1].point.x + 20, e.item.segments[e.item.segments.length-1].point.y +  30),
 			fillColor: 'black',
 		});
 		/*debugTextEnd = new PointText({
