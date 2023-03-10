@@ -249,19 +249,74 @@ function deletePath(pathTD) {
 			})
 			console.log("ONE");
 			console.log(EndStart.slice());
+
+			//EndStart[0].c.removeConnected({c:EndStart[1].c,f:EndStart[1].f})
+
+
+
 			let A = EndStart[0].c
 			let Ainner
 			let Aouter
-			console.log(A.data.conEnd.slice());
+
+			//start of first line is its end or start
+			let AJbegin
+			//end of second line is its end or start
+			let BJend
+			
+			console.log(A.data.conEnd);
 			if(A.data.conEnd.some(e => e.c.id == pathTD.id)){
-				Ainner = A.data.conEnd.slice()
-				Aouter = A.data.conStart.slice()
+				//outer is start and inner is end
+				AJbegin="start"
+				console.log("CON END on A is INNER");
+				Ainner = A.data.conEnd
+
+				Aouter = EndStart[0].c.data.conStart//A.data.conStart
+			
+				EndStart[0].c.data.conStart.forEach((e)=>{
+					//e.c.removeConnected({c:EndStart[0].c,f:e.f})
+					//e.c.removeConnected({c:EndStart[1].c,f:e.f})
+					
+					//e.c.removeConnected({c:EndStart[1],f:"start"})
+					//e.c.removeConnected({c:EndStart[1],f:"end"})
+					//e.c.removeConnected({c:EndStart[0],f:"start"})
+					//e.c.removeConnected({c:EndStart[0],f:"end"})
+					
+
+					console.log("HOHOHOHOHOHOHOHO")
+					console.log(pathTD.id);
+					//e.c.removeConnected({c:pathTD,f:"start"});
+					//e.c.removeConnected({c:pathTD,f:"end"});
+	
+				})
+
 			}else{
-				Ainner = A.data.conStart.slice()
-				Aouter = A.data.conEnd.slice()
+				AJbegin="end"
+				//inner is start and outer is end
+				console.log("CON END on A is OUTER");
+				Ainner = A.data.conStart
+
+				Aouter = EndStart[0].c.data.conEnd//EndStart[0].c.data.conEnd
+
+
+				EndStart[0].c.data.conEnd.forEach((e)=>{
+					//e.c.removeConnected({c:EndStart[0].c,f:e.f})
+					//e.c.removeConnected({c:EndStart[1].c,f:e.f})
+					
+					//e.c.removeConnected({c:EndStart[1],f:"start"})
+					//e.c.removeConnected({c:EndStart[1],f:"end"})
+					//e.c.removeConnected({c:EndStart[0],f:"start"})
+					//e.c.removeConnected({c:EndStart[0],f:"end"})
+	
+					console.log("HOHOHOHOHOHOHOHO")
+					console.log(pathTD.id);
+					//e.c.removeConnected({c:pathTD,f:"start"});
+					//e.c.removeConnected({c:pathTD,f:"end"});
+	
+				})
+
 			}
 			let B = EndStart[1]
-			console.log(EndStart.slice());
+			console.log(EndStart);
 			let Binner
 			let Bouter
 
@@ -271,11 +326,55 @@ function deletePath(pathTD) {
 
 			
 			if(EndStart[1].f == "start"){
-				Bouter = EndStart[1].c.data.conEnd.slice()
+				BJend="end"
+				//inner is start and outer is end
+				console.log("CON END on B is OUTER");
+
+				Bouter = EndStart[1].c.data.conEnd
+
+				EndStart[1].c.data.conEnd.forEach((e)=>{
+					e.c.strokeColor = "blue"
+					
+					//e.c.removeConnected({c:EndStart[1].c,f:"start"})
+					//e.c.removeConnected({c:EndStart[1].c,f:"end"})
+					//e.c.removeConnected({c:EndStart[0].c,f:"start"})
+					//e.c.removeConnected({c:EndStart[0].c,f:"end"})
+					//e.c.removeConnected({c:EndStart[0],f:e.f})
+					console.log("HOHOHOHOHOHOHOHO")
+					console.log(pathTD.id);
+					//e.c.removeConnected({c:pathTD,f:"start"});
+					//e.c.removeConnected({c:pathTD,f:"end"});
+	
+				})
+
+				
 			}else if(EndStart[1].f == "end"){
-				Bouter = EndStart[1].c.data.conStart.slice()
+				BJend="start"
+				//outer is start and inner is end
+				console.log("CON START on B is OUTER");
+
+				Bouter = EndStart[1].c.data.conStart
+
+				EndStart[1].c.data.conStart.forEach((e)=>{
+					e.c.strokeColor = "blue"
+	
+					//e.c.removeConnected({c:EndStart[1].c,f:"start"})
+					//e.c.removeConnected({c:EndStart[1].c,f:"end"})
+					//e.c.removeConnected({c:EndStart[0].c,f:"start"})
+					//e.c.removeConnected({c:EndStart[0].c,f:"end"})
+					//e.c.removeConnected({c:EndStart[0],f:e.f})
+
+					console.log("HOHOHOHOHOHOHOHO")
+					console.log(pathTD.id);
+					//e.c.removeConnected({c:pathTD,f:"start"});
+					//e.c.removeConnected({c:pathTD,f:"end"});
+	
+				})
+				
 			}
-			EndStart[0].c.removeConnected({c:EndStart[1].c,f:EndStart[1].f})
+			//gets rewritten
+			//EndStart[0].c.removeConnected({c:EndStart[1].c,f:EndStart[1].f})
+			
 			/*if(B.data.conEnd.some(e => e.c.id == pathTD.id)){
 				console.log("TWOA");
 				Binner = B.data.conEnd
@@ -329,14 +428,74 @@ function deletePath(pathTD) {
 
 			//EndStart[1] = Binner
 			console.log(EndStart.slice());
-			Bouter.forEach((e)=>{
-				
+			/*Bouter.forEach((e)=>{
+				e.c.strokeColor = "blue"
+
+				e.c.removeConnected({c:EndStart[1],f:"start"})
+				e.c.removeConnected({c:EndStart[1],f:"end"})
+				e.c.removeConnected({c:EndStart[0],f:"start"})
+				e.c.removeConnected({c:EndStart[0],f:"end"})
+				//e.c.removeConnected({c:EndStart[0],f:e.f})
+				e.c.removeConnected({c:pathTD,f:"start"});
+				e.c.removeConnected({c:pathTD,f:"end"});
+
+			})*/
+			EndStart[1].c.removeConnected({c:pathTD,f:"end"})
+			EndStart[1].c.removeConnected({c:pathTD,f:"start"})
+			/*Aouter.forEach((e)=>{
+				e.c.removeConnected({c:EndStart[0],f:e.f})
 				e.c.removeConnected({c:EndStart[1],f:e.f})
 				
-			})
-			EndStart[0].c.join(EndStart[1].c)
-			EndStart[0].c.data.conStart = Aouter
-			EndStart[0].c.data.conEnd = Bouter
+				e.c.removeConnected({c:EndStart[1],f:"start"})
+				e.c.removeConnected({c:EndStart[1],f:"end"})
+				e.c.removeConnected({c:EndStart[0],f:"start"})
+				e.c.removeConnected({c:EndStart[0],f:"end"})
+
+				e.c.removeConnected({c:pathTD,f:"start"});
+				e.c.removeConnected({c:pathTD,f:"end"});
+
+			})*/
+			EndStart[0].c.removeConnected({c:pathTD,f:"end"})
+			EndStart[0].c.removeConnected({c:pathTD,f:"start"})
+			//EndStart[0].c.join(EndStart[1].c)
+			//EndStart[0].c.data.conStart = Aouter
+			//EndStart[0].c.data.conEnd = Bouter
+			//EndStart[0].c.removeConnected({c:pathTD,f:"start"});
+			//EndStart[0].c.removeConnected({c:pathTD,f:"end"});
+
+			//start of first line is its end or start
+			//let AJbegin
+			//end of second line is its end or start
+			//let BJend
+
+			let joinedPathSegments
+			if(AJbegin=="start"){
+				if(BJend=="start"){
+					joinedPathSegments = EndStart[0].c.segments.concat(EndStart[1].c.segments.reverse())
+				}else if(BJend=="end"){
+					joinedPathSegments = EndStart[0].c.segments.concat(EndStart[1].c.segments)
+				}
+			}else if(AJbegin=="end"){
+				if(BJend=="start"){
+					joinedPathSegments = EndStart[0].c.segments.reverse().concat(EndStart[1].c.segments.reverse())
+				}else if(BJend=="end"){
+					joinedPathSegments = EndStart[0].c.segments.reverse().concat(EndStart[1].c.segments)
+				}
+			}
+			//joinedPathSegments = EndStart[0].segments.concat(EndStart[1].segments)
+			jPath = createPath(undefined,joinedPathSegments)
+			jPath.data.conStart = Aouter;
+			jPath.data.conStartMeta = AJbegin;
+			jPath.data.conEnd = Bouter;
+			jPath.data.conEndMeta = BJend;
+
+			jPath.data.conStart[0].c.strokeColor = "red"
+			//jPath.data.conEnd[0].c.strokeColor = "red"
+			console.log("HEREHEREHERE");
+			console.log(EndStart[0].c);
+			console.log(EndStart[1].c);
+			EndStart[0].c.remove()
+			EndStart[1].c.remove()
 			//A.data.conStart = Aouter
 			//A.data.conEnd = Binner
 		}else{
@@ -349,10 +508,12 @@ function deletePath(pathTD) {
 	}
 	
 	deleteAndWeld(pathTD.data.conEnd)
-	deleteAndWeld(pathTD.data.conStart)
+
 	/*pathTD.data.conStart.forEach((e)=>{
-		e.removeConnected(pathTD)
+		e.c.removeConnected({c:pathTD,f:"start"})
+		e.c.removeConnected({c:pathTD,f:"end"})
 	})*/
+	//deleteAndWeld(pathTD.data.conStart)
 
 
 	pathTD.remove();
@@ -414,23 +575,42 @@ function createPath(position,segmentsArray) {
 		}
 	}
 	cPath.removeConnected = function(connected) {
+		console.log("REMOVING CONNECTED");
 		if(connected.f == "start"){
 			let ib
-			if (cPath.data.conStart.some((e,i) => {if(e.c.id == connected.id){ib=i;return true}})) {
+			if (cPath.data.conStart.some((e,i) => {if(e.c.id == connected.c.id){ib=i;return true}})) {
 				console.log("removed from start: ");
-				console.log(cPath.data.conStart[ib].splice());
+				console.log(cPath.data.conStart[ib]);
 				cPath.data.conStart.splice(ib, 1)
 				
 				//return "end"
 			}
 		}else if (connected.f == "end"){
 			let ib
-			if (cPath.data.conEnd.some((e,i) => {if(e.c.id == connected.id){ib=i;return true}})) {
+			/*function isInsideCon(e, i) {
+				if(e.c.id == connected.c.id){
+
+				}
+				
+				//return element > 5;
+			}*/
+			/*if (cPath.data.conEnd.some(isInsideCon)) {
 				console.log("removed from end: ");
-				console.log(cPath.data.conStart[ib].splice());
+				console.log(cPath.data.conEnd[ib].splice());
+				cPath.data.conEnd.splice(ib, 1)
+				//return "end"
+			}*/
+			if (cPath.data.conEnd.some((e,i) => {if(e.c.id == connected.c.id){ib=i;return true}})) {
+				console.log("removed from end: ");
+				console.log(cPath.data.conEnd[ib]);
 				cPath.data.conEnd.splice(ib, 1)
 				//return "end"
 			}
+		}else{
+			console.log("FAILED FAILED FAILED");
+			console.log(connected);
+			console.log("-------------------");
+
 		}
 	}
 	cPath.removeConnectedStart = function(connected) {
@@ -909,15 +1089,18 @@ testTool.onMouseDown = function(event) {
 		//let text2 = e.item.data.conEnd[0].c+" : "+e.item.data.conEnd[0].f+" - "+e.item.data.conEnd[1].c+" : "+e.item.data.conEnd[1].f+" - "+e.item.data.conEnd[2].c+" : "+e.item.data.conEnd[2].f
 		console.log("S: ");
 		console.log(e.item.data.conStart.slice())
+		console.log(e.item.data.conStartMeta);
 		console.log("E: ");
 		console.log(e.item.data.conEnd.slice())
+		console.log(e.item.data.conEndMeta);
+
 		debugTextStart = new PointText({
-			content: "START",
+			content: `START ${e.item.data.conStart.length}`,
 			point: new Point(e.item.segments[0].point.x + 20, e.item.segments[0].point.y +  30),
 			fillColor: 'black',
 		});
 		debugTextEnd = new PointText({
-			content: "END",
+			content: `END ${e.item.data.conEnd.length}`,
 			point: new Point(e.item.segments[e.item.segments.length-1].point.x + 20, e.item.segments[e.item.segments.length-1].point.y +  30),
 			fillColor: 'black',
 		});
