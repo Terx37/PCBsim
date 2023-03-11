@@ -51,6 +51,8 @@ function makeIO(parent,i,posX, posY,radius = 20,width = 7,fillColor = "yellow",s
 	io.strokeColor = strokeColor;
 
 	io.data.con = [];
+	io.data.bindedMesh;
+	io.data.powerState
 
 	io.onMouseEnter = function(event) {
 		io.fillColor = hoverColor;
@@ -95,15 +97,6 @@ function makeOutput(parent, i, posX,posY) {
 	output = makeIO(parent, i, posX,posY)
 	if(!output){return undefined}
 	output.data.objectType = "output"
-	output.data.powerState
-	/*output.data.connected = function() {
-		console.log("TESTING FOR CONNECTIONS")
-		let hitOptions = {ends:true, segments: false,stroke: false,curves:false, fill: false,tolerance: 0};
-		let hitResults = project.hitTestAll({x: output.data.x, y: output.data.y}, hitOptions)
-		return hitResults.filter(e => e.item.id != output.id).map(e => e.item)
-	}*/
-	
-	
 	
 	output.onMouseDown = function(event) {
 		console.log("WORKS");
@@ -112,18 +105,22 @@ function makeOutput(parent, i, posX,posY) {
 
 	output.changePowerState = function() {
 		if(output.data.powerState){
-			console.log(output.data.connected());
-			output.data.connected().forEach(line => {
-				line.powerUpdate(true)
-				//line.strokeColor = "red"
-			});
+			output.data.powerState = false;
+			output.strokeColor = "black"
+			output.data.bindedMesh.p--
+			if(output.data.bindedMesh.p == 0){
+				switchInputsOnMeshToState(output.data.bindedMesh,false)
+			}
 		}else{
-			output.data.connected().forEach(line => {
-				line.powerUpdate(false)
-				//line.strokeColor = "black"
-			});
+			output.data.powerState = true;
+			output.strokeColor = "blue"
+			output.data.bindedMesh.p++
+			if(output.data.bindedMesh.p == 1){
+                switchInputsOnMeshToState(output.data.bindedMesh,true)
+            }
 		}
-	
+		//updatePowerLevelOnElementsOfMesh(calculatePowerLevelOfMesh())
+		
 	}
 	return output;
 }
@@ -169,7 +166,8 @@ function outputClicked(event, self) {
 		
 	}
 	if(paper.tool == clickTool){
-		if(self.data.powerState){
+		self.changePowerState();
+		/*if(self.data.powerState){
 			self.data.powerState = false;
 			self.strokeColor = "black"
 			//self.changePowerState()
@@ -179,19 +177,8 @@ function outputClicked(event, self) {
 			self.strokeColor = "blue"
 			//self.changePowerState()
 			
-		}
-		self.data.connected().forEach(line => {
-			//line.data.powerLevel++
-			line.data.powerLevel = 0
-			/*if(self.data.powerState){line.data.powerLevel = 1}*/
-			line.powerCount()
-			line.powerUpdate(powerCount)
-			updatedLines = []
-			countedLines = []
-			
-			//line.strokeColor = "red"
-		});
-		powerCount = 0
+		}*/
+		
 	}
 
 }
@@ -222,6 +209,7 @@ function connectToInput(self) {
 
 	heldPath.selected = true;
 	heldPath = undefined;
+	reworkMesh(self)
 	//isDrawing = false;
 }
 
@@ -246,273 +234,6 @@ function getConnections(path) {
 
 function deletePath(pathTD) {
 
-	function deleteAndWeld1(EndCons, isEorS){
-		if(EndStart.length == 2){
-
-			EndStart.forEach((e)=>{
-				
-				e.c.removeConnected({c:pathTD,f:e.f})
-				
-			})
-			console.log("ONE");
-			console.log(EndStart.slice());
-
-			//EndStart[0].c.removeConnected({c:EndStart[1].c,f:EndStart[1].f})
-
-
-
-			let A = EndStart[0].c
-			let Ainner
-			let Aouter
-
-			//start of first line is its end or start
-			let AJbegin
-			//end of second line is its end or start
-			let BJend
-			
-			console.log(A.data.conEnd);
-			if(A.data.conEnd.some(e => e.c.id == pathTD.id)){
-				//outer is start and inner is end
-				AJbegin="start"
-				console.log("CON END on A is INNER");
-				Ainner = A.data.conEnd
-
-				Aouter = EndStart[0].c.data.conStart//A.data.conStart
-			
-				EndStart[0].c.data.conStart.forEach((e)=>{
-					//e.c.removeConnected({c:EndStart[0].c,f:e.f})
-					//e.c.removeConnected({c:EndStart[1].c,f:e.f})
-					
-					//e.c.removeConnected({c:EndStart[1],f:"start"})
-					//e.c.removeConnected({c:EndStart[1],f:"end"})
-					//e.c.removeConnected({c:EndStart[0],f:"start"})
-					//e.c.removeConnected({c:EndStart[0],f:"end"})
-					
-
-					console.log("HOHOHOHOHOHOHOHO")
-					console.log(pathTD.id);
-					//e.c.removeConnected({c:pathTD,f:"start"});
-					//e.c.removeConnected({c:pathTD,f:"end"});
-	
-				})
-
-			}else{
-				AJbegin="end"
-				//inner is start and outer is end
-				console.log("CON END on A is OUTER");
-				Ainner = A.data.conStart
-
-				Aouter = EndStart[0].c.data.conEnd//EndStart[0].c.data.conEnd
-
-
-				EndStart[0].c.data.conEnd.forEach((e)=>{
-					//e.c.removeConnected({c:EndStart[0].c,f:e.f})
-					//e.c.removeConnected({c:EndStart[1].c,f:e.f})
-					
-					//e.c.removeConnected({c:EndStart[1],f:"start"})
-					//e.c.removeConnected({c:EndStart[1],f:"end"})
-					//e.c.removeConnected({c:EndStart[0],f:"start"})
-					//e.c.removeConnected({c:EndStart[0],f:"end"})
-	
-					console.log("HOHOHOHOHOHOHOHO")
-					console.log(pathTD.id);
-					//e.c.removeConnected({c:pathTD,f:"start"});
-					//e.c.removeConnected({c:pathTD,f:"end"});
-	
-				})
-
-			}
-			let B = EndStart[1]
-			console.log(EndStart);
-			let Binner
-			let Bouter
-
-			if(EndStart[0].f == "start"){
-				
-			}
-
-			
-			if(EndStart[1].f == "start"){
-				BJend="end"
-				//inner is start and outer is end
-				console.log("CON END on B is OUTER");
-
-				Bouter = EndStart[1].c.data.conEnd
-
-				EndStart[1].c.data.conEnd.forEach((e)=>{
-					e.c.strokeColor = "blue"
-					
-					//e.c.removeConnected({c:EndStart[1].c,f:"start"})
-					//e.c.removeConnected({c:EndStart[1].c,f:"end"})
-					//e.c.removeConnected({c:EndStart[0].c,f:"start"})
-					//e.c.removeConnected({c:EndStart[0].c,f:"end"})
-					//e.c.removeConnected({c:EndStart[0],f:e.f})
-					console.log("HOHOHOHOHOHOHOHO")
-					console.log(pathTD.id);
-					//e.c.removeConnected({c:pathTD,f:"start"});
-					//e.c.removeConnected({c:pathTD,f:"end"});
-	
-				})
-
-				
-			}else if(EndStart[1].f == "end"){
-				BJend="start"
-				//outer is start and inner is end
-				console.log("CON START on B is OUTER");
-
-				Bouter = EndStart[1].c.data.conStart
-
-				EndStart[1].c.data.conStart.forEach((e)=>{
-					e.c.strokeColor = "blue"
-	
-					//e.c.removeConnected({c:EndStart[1].c,f:"start"})
-					//e.c.removeConnected({c:EndStart[1].c,f:"end"})
-					//e.c.removeConnected({c:EndStart[0].c,f:"start"})
-					//e.c.removeConnected({c:EndStart[0].c,f:"end"})
-					//e.c.removeConnected({c:EndStart[0],f:e.f})
-
-					console.log("HOHOHOHOHOHOHOHO")
-					console.log(pathTD.id);
-					//e.c.removeConnected({c:pathTD,f:"start"});
-					//e.c.removeConnected({c:pathTD,f:"end"});
-	
-				})
-				
-			}
-			//gets rewritten
-			//EndStart[0].c.removeConnected({c:EndStart[1].c,f:EndStart[1].f})
-			
-			/*if(B.data.conEnd.some(e => e.c.id == pathTD.id)){
-				console.log("TWOA");
-				Binner = B.data.conEnd
-				Bouter = B.data.conStart
-				//B.data.conStart.forEach((e)=>{
-					let r = pathTD.removeConnected(B)
-					let resp = B.data.conStart[0].removeConnected(B)
-					console.log(EndStart.slice());
-
-					console.log(resp);
-					if (resp == "end"){
-						B.data.conStart[0].addConnectedEnd(A,"end")
-						console.log("A");
-					}
-					if (resp == "start"){
-						B.data.conStart[0].addConnectedStart(A,"end")
-						console.log("B");
-
-					}
-				//})
-				console.log(EndStart.slice());
-			
-			}else{
-				console.log("TWOB");
-				Binner = B.data.conStart
-				Bouter = B.data.conEnd
-				B.data.conEnd.forEach((e)=>{
-					let resp
-					if(e.f == "start"){
-						resp = e.c.removeConnectedStart(B)
-					}else if(e.f == "end"){
-						resp = e.c.removeConnectedEnd(B)
-
-					}
-					if (resp == "end"){
-						e.c.addConnectedEnd(A,"start")
-						console.log("A1");
-					}
-					if (resp == "start"){
-						e.c.addConnectedStart(A,"start")
-						console.log("B1");
-					}
-				})
-			}*/
-
-			/*cPath.data.conEnd.forEach((e)=>{
-				
-				e.c.removeConnected({c:cPath,f:e.f})
-				
-			})*/
-
-			//EndStart[1] = Binner
-			console.log(EndStart.slice());
-			/*Bouter.forEach((e)=>{
-				e.c.strokeColor = "blue"
-
-				e.c.removeConnected({c:EndStart[1],f:"start"})
-				e.c.removeConnected({c:EndStart[1],f:"end"})
-				e.c.removeConnected({c:EndStart[0],f:"start"})
-				e.c.removeConnected({c:EndStart[0],f:"end"})
-				//e.c.removeConnected({c:EndStart[0],f:e.f})
-				e.c.removeConnected({c:pathTD,f:"start"});
-				e.c.removeConnected({c:pathTD,f:"end"});
-
-			})*/
-			EndStart[1].c.removeConnected({c:pathTD,f:"end"})
-			EndStart[1].c.removeConnected({c:pathTD,f:"start"})
-			/*Aouter.forEach((e)=>{
-				e.c.removeConnected({c:EndStart[0],f:e.f})
-				e.c.removeConnected({c:EndStart[1],f:e.f})
-				
-				e.c.removeConnected({c:EndStart[1],f:"start"})
-				e.c.removeConnected({c:EndStart[1],f:"end"})
-				e.c.removeConnected({c:EndStart[0],f:"start"})
-				e.c.removeConnected({c:EndStart[0],f:"end"})
-
-				e.c.removeConnected({c:pathTD,f:"start"});
-				e.c.removeConnected({c:pathTD,f:"end"});
-
-			})*/
-			EndStart[0].c.removeConnected({c:pathTD,f:"end"})
-			EndStart[0].c.removeConnected({c:pathTD,f:"start"})
-			//EndStart[0].c.join(EndStart[1].c)
-			//EndStart[0].c.data.conStart = Aouter
-			//EndStart[0].c.data.conEnd = Bouter
-			//EndStart[0].c.removeConnected({c:pathTD,f:"start"});
-			//EndStart[0].c.removeConnected({c:pathTD,f:"end"});
-
-			//start of first line is its end or start
-			//let AJbegin
-			//end of second line is its end or start
-			//let BJend
-
-			let joinedPathSegments
-			if(AJbegin=="start"){
-				if(BJend=="start"){
-					joinedPathSegments = EndStart[0].c.segments.concat(EndStart[1].c.segments.reverse())
-				}else if(BJend=="end"){
-					joinedPathSegments = EndStart[0].c.segments.concat(EndStart[1].c.segments)
-				}
-			}else if(AJbegin=="end"){
-				if(BJend=="start"){
-					joinedPathSegments = EndStart[0].c.segments.reverse().concat(EndStart[1].c.segments.reverse())
-				}else if(BJend=="end"){
-					joinedPathSegments = EndStart[0].c.segments.reverse().concat(EndStart[1].c.segments)
-				}
-			}
-			//joinedPathSegments = EndStart[0].segments.concat(EndStart[1].segments)
-			jPath = createPath(undefined,joinedPathSegments)
-			jPath.data.conStart = Aouter;
-			jPath.data.conStartMeta = AJbegin;
-			jPath.data.conEnd = Bouter;
-			jPath.data.conEndMeta = BJend;
-
-			jPath.data.conStart[0].c.strokeColor = "red"
-			//jPath.data.conEnd[0].c.strokeColor = "red"
-			console.log("HEREHEREHERE");
-			console.log(EndStart[0].c);
-			console.log(EndStart[1].c);
-			EndStart[0].c.remove()
-			EndStart[1].c.remove()
-			//A.data.conStart = Aouter
-			//A.data.conEnd = Binner
-		}else{
-			pathTD.data.conEnd.forEach((e)=>{
-				e.c.removeConnected({c:pathTD,f:e.f})
-				//e.c.removeConnected(pathTD)
-
-			})
-		}
-	}
 	function deleteAndWeld(EndCons){
 		//arr of connections at pathTD.data.conEnd
 		//arr of {c:con,f:"if its connected at its start or end"}
@@ -542,7 +263,6 @@ function deletePath(pathTD) {
 					weldOut[i] = "end"
 					weldOutCons[i] = weldedCon.c.data.conEnd
 				}
-
 
 				//change ref of outside
 				weldOutCons[i].forEach((e)=>{
@@ -616,12 +336,68 @@ let updatedLines = []
 let countedLines = []
 let powerCount = 0
 
+function reworkMesh(fromElement){	
+	updatePowerLevelOnElementsOfMesh(calculatePowerLevelOfMesh(bakeConnectionsMesh(fromElement)))
+}
 
+function bakeConnectionsMesh(fromElement, mesh){
+	//fromElement == line or IO
 
+	//if first layer
+	if(mesh == undefined){
+		mesh = {m:[],p:0}
+	}
+	//foreach con on fromElement
+	fromElement.data.con.map(e => e.c).forEach(e => {
+		if(!mesh.m.includes(e)){
 
+			e.data.bindedMesh = mesh
+			//e.strokeColor = "blue"
+			if((e.data.objectType == "output")&&(e.data.powerState == true)){
+				mesh.p++
+			}
+			mesh.m.push(e)
+			mesh = bakeConnectionsMesh(e, mesh)
+		}
+	})
+	return mesh
+}
+
+function calculatePowerLevelOfMesh(mesh){
+	mesh.m.forEach((e)=>{
+		if((e.data.objectType == "output")&&(e.data.powerState == true)){
+			mesh.p++
+		}
+	})
+	return mesh
+}
+function updatePowerLevelOnElementsOfMesh(mesh){
+	mesh.m.forEach((e)=>{
+		e.data.powerLevel = mesh.p
+	})
+}
+
+function switchInputsOnMeshToState(mesh,state) {
+	mesh.m.forEach((e)=>{
+		if(e.data.objectType == "input"){
+				e.data.powerState = state;
+		}
+	})
+}
+
+function updateInputsOnMesh(mesh){
+	mesh.m.forEach((e)=>{
+		if(e.data.objectType == "input"){
+			if(mesh.p > 0){
+				e.data.powerState = true;
+			}else{
+				e.data.powerState = false;
+			}
+		}
+	})
+}
 
 function createPath(position,segmentsArray) {
-	
 	
 	let segments;
 	if(segmentsArray == undefined){
@@ -638,13 +414,21 @@ function createPath(position,segmentsArray) {
 		strokeWidth: 5,
 		data: {connections: new Array(),parentCont: null}
 	});
+
 	cPath.data.objectType = "line"
 	//path.onMouseDown = function(event) {
 	cPath.data.powerLevel = 0;
 	cPath.data.conStart = []
 	cPath.data.conEnd = []
+	cPath.data.bindedMesh;
 
-
+	Object.defineProperty(cPath.data, 'con', {
+		get: function() { 
+			return cPath.data.conStart.concat(cPath.data.conEnd)
+		}
+	  });
+		
+	
 	//we tell the function if we pushed this connection from its start or from its end
 	//so that if 
 	cPath.addConnectedStart = function(connected, fromStartOrEnd) {
@@ -674,19 +458,6 @@ function createPath(position,segmentsArray) {
 			}
 		}else if (connected.f == "end"){
 			let ib
-			/*function isInsideCon(e, i) {
-				if(e.c.id == connected.c.id){
-
-				}
-				
-				//return element > 5;
-			}*/
-			/*if (cPath.data.conEnd.some(isInsideCon)) {
-				console.log("removed from end: ");
-				console.log(cPath.data.conEnd[ib].splice());
-				cPath.data.conEnd.splice(ib, 1)
-				//return "end"
-			}*/
 			if (cPath.data.conEnd.some((e,i) => {if(e.c.id == connected.c.id){ib=i;return true}})) {
 				console.log("removed from end: ");
 				console.log(cPath.data.conEnd[ib]);
@@ -697,25 +468,14 @@ function createPath(position,segmentsArray) {
 			console.log("FAILED FAILED FAILED");
 			console.log(connected);
 			console.log("-------------------");
-
 		}
 	}
 	cPath.removeConnectedStart = function(connected) {
-		/*if(cPath.data.conEnd.includes(connected)){
-			cPath.data.conEnd.splice(cPath.data.conEnd.indexOf(connected), 1)
-			return "end"
-		}*/
 		let ib
 		if (cPath.data.conStart.some((e,i) => {if(e.c.id == connected.id){ib=i;return true}})) {
 			cPath.data.conStart.splice(ib, 1)
 			return "start"
 		}
-		/*
-		if(cPath.data.conStart.includes(connected)){
-			cPath.data.conStart.splice(cPath.data.conEnd.indexOf(connected), 1)
-			return "start"
-		}
-		*/
 	}
 	cPath.removeConnectedEnd = function(connected, instigatorStartOrEnd) {
 		
@@ -747,10 +507,6 @@ function createPath(position,segmentsArray) {
 	}
 	cPath.powerCount = function() {
 		
-		/*getIO(){
-			let hitOptions = {ends:false, segments: false,stroke: false,curves:false, fill: true,tolerance: 0};
-			return hitResults = project.hitTestAll(event.point, hitOptions)
-		}*/
 		if(cPath.segments[0].connectedToInput){
 			console.log("a");
 			if(cPath.segments[0].connectedToInput.data.objectType === "output"){
@@ -883,6 +639,10 @@ function createPath(position,segmentsArray) {
 			pathB.selected = true;
 			heldPath = undefined;
 			isDrawing = false;
+
+			//trigger mesh recalculation
+			reworkMesh(cPath)
+
 		} else {
 			//start drawing at path
 			console.log("you started drawing from path");
@@ -990,7 +750,7 @@ function createPath(position,segmentsArray) {
 
 
 
-			
+			reworkMesh(cPath)
 			
 			isDrawing = true
 		}
@@ -1213,7 +973,8 @@ testTool.onMouseDown = function(event) {
 				fillColor: 'black',
 			});
 		}
-
+		//console.log(bakeConnectionsMesh(e.item))
+		console.log(e.item.data.bindedMesh);
 	})
 	console.log("WE HIT:");
 	console.log(hitResults);
