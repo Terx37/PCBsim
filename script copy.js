@@ -20,11 +20,17 @@ selectTool.activate()
 
 parent = {out: [{posX: 100, posY: 200}]}
 
-console.log(makeOutput(null,null,null,null));
-console.log(makeOutput(parent,0,null,null));
-console.log(makeOutput(null,null,100,300));
-console.log(makeInput(null,null,200,100));
+//console.log(makeOutput(null,null,null,null));
+//console.log(makeOutput(parent,0,null,null));
+//console.log(makeOutput(null,null,100,300));
+//console.log(makeInput(null,null,200,100));
+makeOutput(null,null,100,100)
+makeOutput(null,null,100,300)
+makeInput(null,null,500,100)
+makeInput(null,null,500,300)
 
+makeInput(null,null,100,200)
+makeOutput(null,null,500,200)
 
 function makeIO(parent,i,posX, posY,radius = 20,width = 7,fillColor = "yellow",strokeColor = "black",hoverColor = "red") {
 	//if suplied parent of output and number of output, automaticly places itself to the correct position
@@ -44,7 +50,7 @@ function makeIO(parent,i,posX, posY,radius = 20,width = 7,fillColor = "yellow",s
 	io.fillColor = fillColor;
 	io.strokeColor = strokeColor;
 
-	io.data.connected = [];
+	io.data.con = [];
 
 	io.onMouseEnter = function(event) {
 		io.fillColor = hoverColor;
@@ -59,8 +65,8 @@ function makeIO(parent,i,posX, posY,radius = 20,width = 7,fillColor = "yellow",s
 	}
 	io.addConnected = function(connected, fromStartOrEnd) {
 
-		if(!io.data.connected.some(e => e.c.id == connected.id)){
-			io.data.connected.push({c:connected,f:fromStartOrEnd})
+		if(!io.data.con.some(e => e.c.id == connected.id)){
+			io.data.con.push({c:connected,f:fromStartOrEnd})
 		}
 		/*
 		if(!io.data.connected.includes(connected)){
@@ -70,8 +76,8 @@ function makeIO(parent,i,posX, posY,radius = 20,width = 7,fillColor = "yellow",s
 	}
 	io.removeConnected = function(connected) {
 		let ia
-		if(io.data.connected.some((e,i) => {if(e.c.id == connected.id){ia = i;return true;}})){
-			io.data.connected.splice(ia, 1)
+		if(io.data.con.some((e,i) => {if(e.c.id == connected.c.id){ia = i;return true;}})){
+			io.data.con.splice(ia, 1)
 		}
 
 		/*
@@ -194,6 +200,7 @@ function inputClicked(event, self) {
 	console.log("inputClicked")
 	if(paper.tool == lineDrawTool){
 			if(isDrawing){
+				isDrawing = false;
 				connectToInput(self)
 			}
 		}
@@ -215,7 +222,7 @@ function connectToInput(self) {
 
 	heldPath.selected = true;
 	heldPath = undefined;
-	isDrawing = false;
+	//isDrawing = false;
 }
 
 function getConnectionsAtStart(path) {
@@ -239,7 +246,7 @@ function getConnections(path) {
 
 function deletePath(pathTD) {
 
-	function deleteAndWeld(EndStart){
+	function deleteAndWeld1(EndCons, isEorS){
 		if(EndStart.length == 2){
 
 			EndStart.forEach((e)=>{
@@ -506,8 +513,88 @@ function deletePath(pathTD) {
 			})
 		}
 	}
-	
-	deleteAndWeld(pathTD.data.conEnd)
+	function deleteAndWeld(EndCons){
+		//arr of connections at pathTD.data.conEnd
+		//arr of {c:con,f:"if its connected at its start or end"}
+		
+		let EndConsFreze = EndCons.slice()
+		
+		console.log(EndCons);
+		
+		if(EndCons.length == 2){
+			//rem ref to pathTD for each connection
+
+			let weldOut = []
+			let weldOutCons = []
+			let jPath = createPath(undefined,[])
+
+			EndCons.forEach((weldedCon, i)=>{
+				weldedCon.c.removeConnected({c:pathTD,f:weldedCon.f})
+				//get outside
+				let outside;
+				let outsideArr;
+				if(weldedCon.f=="end"){
+					//outside = "start"
+					weldOut[i] = "start"
+					weldOutCons[i] = weldedCon.c.data.conStart
+				}else if(weldedCon.f == "start"){
+					//outside = "end"
+					weldOut[i] = "end"
+					weldOutCons[i] = weldedCon.c.data.conEnd
+				}
+
+
+				//change ref of outside
+				weldOutCons[i].forEach((e)=>{
+					//rem ref {c:e.c,f:e.f}
+					//e.c.strokeColor = "violet"
+					if(e.f=="start"){
+						e.c.addConnectedStart(jPath,weldOut[i])
+					}else if(e.f=="end"){
+						e.c.addConnectedEnd(jPath,weldOut[i])
+					}else if(e.f=="io"){
+						e.c.addConnected(jPath,weldOut[i])
+					}
+					e.c.removeConnected({c:weldedCon.c,f:weldedCon.f})
+					//add ref
+					//e.c.addConnected(jPath,e.f)
+					e.c.strokeColor = "blue"
+				})
+			})
+
+			//create new path
+
+			let joinedPathSegments
+
+			//build new path segments
+			if(weldOut[0]=="start"){
+				if(weldOut[1]=="start"){
+					joinedPathSegments = EndCons[0].c.segments.concat(EndCons[1].c.segments.reverse())
+				}else if(weldOut[1]=="end"){
+					joinedPathSegments = EndCons[0].c.segments.concat(EndCons[1].c.segments)
+				}
+			}else if(weldOut[0]=="end"){
+				if(weldOut[1]=="start"){
+					joinedPathSegments = EndCons[0].c.segments.reverse().concat(EndCons[1].c.segments.reverse())
+				}else if(weldOut[1]=="end"){
+					joinedPathSegments = EndCons[0].c.segments.reverse().concat(EndCons[1].c.segments)
+				}
+			}
+
+			//build new path (weld together)
+			//jPath = createPath(undefined,joinedPathSegments)
+			jPath.segments = joinedPathSegments
+			//discard old paths
+			EndCons[0].c.remove()
+			EndCons[1].c.remove()
+			//populate new path with data
+			jPath.data.conStart = weldOutCons[0];
+			jPath.data.conEnd = weldOutCons[1];
+			
+		}
+	}
+	deleteAndWeld(pathTD.data.conEnd, "end")
+	deleteAndWeld(pathTD.data.conStart, "start")
 
 	/*pathTD.data.conStart.forEach((e)=>{
 		e.c.removeConnected({c:pathTD,f:"start"})
@@ -746,8 +833,9 @@ function createPath(position,segmentsArray) {
 			//old end before we shorten the cPath
 			cPath.data.conEnd.forEach((e)=>{
 				
-				e.c.removeConnected({c:cPath,f:e.f})
 				
+				e.c.removeConnected({c:cPath,f:e.f})
+				e.c.addConnected(pathB,e.f)
 			})
 
 			//first half
@@ -814,16 +902,18 @@ function createPath(position,segmentsArray) {
 			//last half
 			pathB = createPath(undefined, cPath.segments.slice(lIndx + 1))
 			pathB.data.conEnd = cPath.data.conEnd.slice()
-
-			
-
 			pathB.data.conStart = [{c:cPath,f:"end"}, {c:heldPath,f:"start"}]
 			
 			//mod connections
 			//old end before we shorten the cPath
 			cPath.data.conEnd.forEach((e)=>{
 				if(e.data){}
+				//console.log(cPath.id);
 				e.c.removeConnected({c:cPath,f:e.f})
+				e.c.addConnected(pathB,e.f)
+				//e.c.data.con[0].c.strokeColor = "violet"
+				//console.log(e.c.data.con[0].c.id)
+				//e.c.strokeColor = "orange"
 				/*if(e.f=="start"){
 					e.c.data.conStart.removeConnectedStart(e)
 				}
@@ -918,8 +1008,6 @@ var textItem = new PointText({
 	point: new Point(20, 30),
 	fillColor: 'black',
 });
-var debugTextStart
-var debugTextEnd
 
 
 var prevTool
@@ -1026,7 +1114,7 @@ function hitTestOnMouseDown(event){
 // While the user drags the mouse, points are added to the path
 // at the position of the mouse:
 lineDrawTool.onMouseMove = function(event) {
-	if(heldPath){
+	if(isDrawing){
 		if(heldPath.segments.length <= 1){
 			heldPath.remove()
 			heldPath = undefined;
@@ -1071,44 +1159,60 @@ lineDrawTool.onMouseUp = function(event) {
 	*/
 }
 let oHit
+let oHit1
+var debugTextStart
+var debugTextEnd
+var debugTextIO
+
 testTool.onMouseDown = function(event) {
 	let hitOptions = {ends:false, segments: true,stroke: true,curves:false, fill: false,tolerance: 10};
 	let hitResults = project.hitTestAll(event.point, hitOptions)
 
 	hitResults.forEach((e)=>{
-		e.item.strokeColor = "green";
+		
 		if(oHit){oHit.strokeColor = "black"}
-		oHit = e.item
+		if(oHit1){oHit1.strokeColor = "black"}
+		
 		if(debugTextEnd){
 			debugTextEnd.remove();
 		}
 		if(debugTextStart){
 			debugTextStart.remove();
 		} 
-		//let text1 = e.item.data.conStart[0].c+" : "+e.item.data.conStart[0].f+" - "+e.item.data.conStart[1].c+" : "+e.item.data.conStart[1].f+" - "+e.item.data.conStart[2].c+" : "+e.item.data.conStart[2].f
-		//let text2 = e.item.data.conEnd[0].c+" : "+e.item.data.conEnd[0].f+" - "+e.item.data.conEnd[1].c+" : "+e.item.data.conEnd[1].f+" - "+e.item.data.conEnd[2].c+" : "+e.item.data.conEnd[2].f
-		console.log("S: ");
-		console.log(e.item.data.conStart.slice())
-		console.log(e.item.data.conStartMeta);
-		console.log("E: ");
-		console.log(e.item.data.conEnd.slice())
-		console.log(e.item.data.conEndMeta);
+		if(debugTextIO){
+			debugTextIO.remove();
+		}
+		if(e.item.data.conStart){
+			e.item.strokeColor = "green";
+			oHit = e.item
+			console.log("S: ");
+			console.log(e.item.data.conStart.slice())
+			console.log("E: ");
+			console.log(e.item.data.conEnd.slice())
+			debugTextStart = new PointText({
+				content: `START ${e.item.data.conStart.length}`,
+				point: new Point(e.item.segments[0].point.x + 20, e.item.segments[0].point.y +  30),
+				fillColor: 'black',
+			});
+			debugTextEnd = new PointText({
+				content: `END ${e.item.data.conEnd.length}`,
+				point: new Point(e.item.segments[e.item.segments.length-1].point.x + 20, e.item.segments[e.item.segments.length-1].point.y +  30),
+				fillColor: 'black',
+			});
+		}else{
+			console.log("IO cons: ");
+			console.log(e.item.data.con.slice());
+			if(e.item.data.con[0]){
+				e.item.data.con[0].c.strokeColor = "red"
 
-		debugTextStart = new PointText({
-			content: `START ${e.item.data.conStart.length}`,
-			point: new Point(e.item.segments[0].point.x + 20, e.item.segments[0].point.y +  30),
-			fillColor: 'black',
-		});
-		debugTextEnd = new PointText({
-			content: `END ${e.item.data.conEnd.length}`,
-			point: new Point(e.item.segments[e.item.segments.length-1].point.x + 20, e.item.segments[e.item.segments.length-1].point.y +  30),
-			fillColor: 'black',
-		});
-		/*debugTextEnd = new PointText({
-			content: 'Click and drag to draw a line.',
-			point: new Point(20, 30),
-			fillColor: 'black',
-		});*/
+				oHit1 = e.item.data.con[0].c
+			}
+			debugTextIO = new PointText({
+				content: `END ${e.item.data.con.length}`,
+				point: new Point(e.item.segments[0].point.x + 20, e.item.segments[0].point.y +  30),
+				fillColor: 'black',
+			});
+		}
 
 	})
 	console.log("WE HIT:");
